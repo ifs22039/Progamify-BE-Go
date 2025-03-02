@@ -19,10 +19,18 @@ type TopicRepository interface {
 	FindById(id uint) (*model.Topic, error)
 	FindTopicWithLessons(id uint) (*model.Topic, error)
 	FindAllByUserId(userId uint) ([]TopicProgressDTO, error)
+	LessonsTakenByUserId(topicId uint, userId uint) ([]model.TakeLesson, error)
+	ExercisesTakenByUserId(topicId uint, userId uint) ([]model.TakeExercise, error)
 }
 
 type topicRepository struct {
 	db *gorm.DB
+}
+
+func (r *topicRepository) ExercisesTakenByUserId(topicId uint, userId uint) ([]model.TakeExercise, error) {
+	var takeExercise []model.TakeExercise
+	err := r.db.Where("topic_id = ? AND user_id = ?", topicId, userId).Find(&takeExercise).Error
+	return takeExercise, err
 }
 
 func NewTopicRepository(db *gorm.DB) TopicRepository {
@@ -33,6 +41,12 @@ func (r *topicRepository) FindById(id uint) (*model.Topic, error) {
 	var topic model.Topic
 	err := r.db.Preload("Lessons.Exercises.Questions").First(&topic, id).Error
 	return &topic, err
+}
+
+func (r *topicRepository) LessonsTakenByUserId(topicId uint, userId uint) ([]model.TakeLesson, error) {
+	var takeLessons []model.TakeLesson
+	err := r.db.Where("topic_id = ? AND user_id = ?", topicId, userId).Find(&takeLessons).Error
+	return takeLessons, err
 }
 
 func (r *topicRepository) FindAll() ([]model.Topic, error) {

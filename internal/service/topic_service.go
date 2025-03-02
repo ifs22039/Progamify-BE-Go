@@ -10,11 +10,16 @@ type TopicService interface {
 	GetAllTopics() ([]model.Topic, error)
 	GetTopicWithLessons(id uint) (*model.Topic, error)
 	GetAllTopicsByUserId(userId uint) ([]repository.TopicProgressDTO, error)
+	GetLessonsTakenByUserId(topicId uint, userId uint) ([]model.TakeLesson, error)
 }
 
 // topicService struct
 type topicService struct {
 	topicRepo repository.TopicRepository
+}
+
+func (s *topicService) GetLessonsTakenByUserId(topicId uint, userId uint) ([]model.TakeLesson, error) {
+	return s.topicRepo.LessonsTakenByUserId(topicId, userId)
 }
 
 func NewTopicService(topicRepo repository.TopicRepository) TopicService {

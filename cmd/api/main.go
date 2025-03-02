@@ -3,11 +3,10 @@ package main
 import (
 	"boysitorus/Progamify-Restful-API/internal/config"
 	"boysitorus/Progamify-Restful-API/internal/handler"
-	"boysitorus/Progamify-Restful-API/internal/middleware"
 	"boysitorus/Progamify-Restful-API/internal/repository"
+	"boysitorus/Progamify-Restful-API/internal/routes"
 	"boysitorus/Progamify-Restful-API/internal/service"
 	"boysitorus/Progamify-Restful-API/pkg/database"
-	"github.com/gin-gonic/gin"
 	"log"
 )
 
@@ -36,24 +35,7 @@ func main() {
 	lessonHandler := handler.NewLessonHandler(lessonService)
 
 	// Initialize Gin router
-	r := gin.Default()
-
-	api := r.Group("/api")
-
-	api.POST("/users/login", authHandler.Login)
-	api.POST("/users/register", authHandler.Register)
-
-	api.Use(middleware.AuthMiddleware())
-	{
-		api.GET("/users/current", userHandler.GetCurrentUser)
-		api.PUT("/users/current", userHandler.UpdateUser)
-		api.DELETE("/users/logout", authHandler.Logout)
-
-		api.GET("/topics", topicHandler.ListTopics)
-		api.GET("/topics/:id", topicHandler.GetTopic)
-
-		api.GET("/lessons/:id", lessonHandler.GetLesson)
-	}
+	r := routes.SetupRoutes(authHandler, userHandler, topicHandler, lessonHandler)
 
 	log.Fatal(r.Run(":8080"))
 }

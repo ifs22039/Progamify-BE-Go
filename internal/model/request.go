@@ -6,9 +6,11 @@ type LoginRequest struct {
 }
 
 type UpdateUserRequest struct {
-	Name     string `json:"name"`
-	Nim      string `json:"nim"`
-	Angkatan int    `json:"angkatan"`
+	Name       string `json:"name"`
+	Nim        string `json:"nim"`
+	Angkatan   int    `json:"angkatan"`
+	TotalExp   int    `json:"total_exp"`
+	TotalPoint int    `json:"total_point"`
 }
 
 type RegisterRequest struct {

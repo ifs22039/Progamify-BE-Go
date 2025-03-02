@@ -10,40 +10,29 @@ import (
 func SetupRoutes(
 	authHandler *handler.AuthHandler,
 	userHandler *handler.UserHandler,
+	topicHandler *handler.TopicHandler,
+	lessonHandler *handler.LessonHandler,
 ) *gin.Engine {
 	// Initialize Gin router
 	r := gin.Default()
 
-	// Public routes
-	setupPublicRoutes(r, authHandler)
-
-	// Protected routes
-	setupProtectedRoutes(r, userHandler, authHandler)
-
-	return r
-}
-
-// setupPublicRoutes defines routes that don't require authentication
-func setupPublicRoutes(r *gin.Engine, authHandler *handler.AuthHandler) {
-	r.POST("/login", authHandler.Login)
-	r.POST("/register", authHandler.Register)
-}
-
-// setupProtectedRoutes defines routes that require authentication
-func setupProtectedRoutes(
-	r *gin.Engine,
-	userHandler *handler.UserHandler,
-	authHandler *handler.AuthHandler,
-) {
-	// Create a route group with authentication middleware
 	api := r.Group("/api")
+
+	api.POST("/users/login", authHandler.Login)
+	api.POST("/users/register", authHandler.Register)
+	api.GET("/customrender", authHandler.CustomRender)
+
 	api.Use(middleware.AuthMiddleware())
 	{
-		// User routes
-		api.GET("/me", userHandler.GetCurrentUser)
-		api.PUT("/me", userHandler.UpdateUser)
+		api.GET("/users/current", userHandler.GetCurrentUser)
+		api.PUT("/users/current", userHandler.UpdateUser)
+		api.DELETE("/users/logout", authHandler.Logout)
 
-		// Auth routes
-		api.POST("/logout", authHandler.Logout)
+		api.GET("/topics", topicHandler.ListTopics)
+		api.GET("/topics/:id", topicHandler.GetTopic)
+
+		api.GET("/lessons/:id", lessonHandler.GetLesson)
 	}
+
+	return r
 }

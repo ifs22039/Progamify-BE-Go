@@ -16,6 +16,7 @@ func NewTopicHandler(topicService service.TopicService) *TopicHandler {
 }
 
 func (h *TopicHandler) GetTopic(c *gin.Context) {
+	userId := c.MustGet("userId").(uint)
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid topic ID"})
@@ -28,7 +29,18 @@ func (h *TopicHandler) GetTopic(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, topic)
+	lessonsTaken, err := h.topicService.GetLessonsTakenByUserId(topic.ID, userId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Lesson Taken not found"})
+		return
+	}
+
+	topicWithLessonsTaken := map[string]interface{}{
+		"topic":                       topic,
+		"lessons_taken_in_this_topic": lessonsTaken,
+	}
+
+	c.JSON(http.StatusOK, topicWithLessonsTaken)
 }
 
 func (h *TopicHandler) GetTopicWithLessons(c *gin.Context) {
