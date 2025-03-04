@@ -12,6 +12,7 @@ func SetupRoutes(
 	userHandler *handler.UserHandler,
 	topicHandler *handler.TopicHandler,
 	lessonHandler *handler.LessonHandler,
+	exerciseHandler *handler.ExerciseHandler,
 ) *gin.Engine {
 	// Initialize Gin router
 	r := gin.Default()
@@ -32,6 +33,8 @@ func SetupRoutes(
 		api.GET("/topics/:id", topicHandler.GetTopic)
 
 		api.GET("/lessons/:id", lessonHandler.GetLesson)
+
+		api.GET("/exercises/:id", exerciseHandler.GetExercise)
 	}
 
 	return r

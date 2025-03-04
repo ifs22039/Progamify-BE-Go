@@ -21,21 +21,24 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	topicRepo := repository.NewTopicRepository(db)
 	lessonRepo := repository.NewLessonRepository(db)
+	exerciseRepo := repository.NewExerciseRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo)
 	userService := service.NewUserService(userRepo)
 	topicService := service.NewTopicService(topicRepo)
 	lessonService := service.NewLessonService(lessonRepo)
+	exerciseService := service.NewExerciseService(exerciseRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
 	userHandler := handler.NewUserHandler(userService)
 	topicHandler := handler.NewTopicHandler(topicService)
 	lessonHandler := handler.NewLessonHandler(lessonService)
+	exerciseHandler := handler.NewExerciseHandler(exerciseService)
 
 	// Initialize Gin router
-	r := routes.SetupRoutes(authHandler, userHandler, topicHandler, lessonHandler)
+	r := routes.SetupRoutes(authHandler, userHandler, topicHandler, lessonHandler, exerciseHandler)
 
 	log.Fatal(r.Run(":8080"))
 }

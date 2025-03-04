@@ -21,3 +21,6 @@ type RegisterRequest struct {
 	Password             string `json:"password" binding:"required,min=8"`
 	PasswordConfirmation string `json:"password_confirmation" binding:"required,eqfield=Password"`
 }
+
+type SubmitExerciseRequest struct {
+}
