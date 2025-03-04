@@ -11,6 +11,7 @@ type UserRepository interface {
 	Update(user *model.User) error
 	Create(user *model.User) error
 	ExistsByEmail(email string) (bool, error)
+	GetTopUsersByExp(limit int) ([]model.User, error)
 }
 
 type userRepository struct {
@@ -45,4 +46,10 @@ func (r *userRepository) ExistsByEmail(email string) (bool, error) {
 	var count int64
 	err := r.db.Model(&model.User{}).Where("email = ?", email).Count(&count).Error
 	return count > 0, err
+}
+
+func (r *userRepository) GetTopUsersByExp(limit int) ([]model.User, error) {
+	var users []model.User
+	err := r.db.Order("total_exp DESC").Limit(limit).Find(&users).Error
+	return users, err
 }
