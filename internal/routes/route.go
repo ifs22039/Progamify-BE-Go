@@ -35,6 +35,7 @@ func SetupRoutes(
 		api.GET("/lessons/:id", lessonHandler.GetLesson)
 
 		api.GET("/exercises/:id", exerciseHandler.GetExercise)
+		api.POST("/exercises/submit", exerciseHandler.SubmitExercise)
 	}
 
 	return r
