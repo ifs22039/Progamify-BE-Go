@@ -28,7 +28,13 @@ func ConvertHTML(input string) string {
 						endIdx := strings.Index(attr.Val[startIdx:], `"`) + startIdx
 						if startIdx > 0 && endIdx > startIdx {
 							imageURL := attr.Val[startIdx:endIdx]
+<<<<<<< HEAD
 							imageURL = strings.Replace(imageURL, "localhost", "172.27.67.49", 1) //for local development only
+=======
+							// imageURL = strings.Replace(imageURL, "localhost", "172.27.67.208", 1) //for local development only
+							//imageURL = strings.Replace(imageURL, "localhost", "10.0.2.2", 1) //for local development only
+							imageURL = strings.Replace(imageURL, "localhost", "172.27.66.235", 1) //for local development only
+>>>>>>> c0a02f260c94f31b85e0ca35a4aae8403ef2cbff
 							newNode := &html.Node{
 								Type: html.ElementNode,
 								Data: "img",

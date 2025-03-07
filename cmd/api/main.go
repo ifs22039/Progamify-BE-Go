@@ -29,6 +29,7 @@ func main() {
 	topicService := service.NewTopicService(topicRepo)
 	lessonService := service.NewLessonService(lessonRepo)
 	exerciseService := service.NewExerciseService(exerciseRepo)
+	leaderboardService := service.NewLeaderboardService(userRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
@@ -36,9 +37,10 @@ func main() {
 	topicHandler := handler.NewTopicHandler(topicService)
 	lessonHandler := handler.NewLessonHandler(lessonService)
 	exerciseHandler := handler.NewExerciseHandler(exerciseService)
+	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardService)
 
 	// Initialize Gin router
-	r := routes.SetupRoutes(authHandler, userHandler, topicHandler, lessonHandler, exerciseHandler)
+	r := routes.SetupRoutes(authHandler, userHandler, topicHandler, lessonHandler, exerciseHandler, leaderboardHandler)
 
 	log.Fatal(r.Run(":8080"))
 }
