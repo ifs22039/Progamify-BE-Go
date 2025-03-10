@@ -23,4 +23,6 @@ type RegisterRequest struct {
 }
 
 type SubmitExerciseRequest struct {
+	ExerciseID uint                `json:"exercise_id" binding:"required"`
+	Answers    map[int]interface{} `json:"answers" binding:"required"`
 }
