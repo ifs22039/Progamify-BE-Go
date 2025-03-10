@@ -14,6 +14,7 @@ func SetupRoutes(
 	lessonHandler *handler.LessonHandler,
 	exerciseHandler *handler.ExerciseHandler,
 	leaderboardHandler *handler.LeaderboardHandler,
+	questHandler *handler.QuestHandler,
 ) *gin.Engine {
 	// Initialize Gin router
 	r := gin.Default()
@@ -38,6 +39,8 @@ func SetupRoutes(
 		api.GET("/exercises/:id", exerciseHandler.GetExercise)
 
 		api.GET("/leaderboard", leaderboardHandler.GetLeaderboard)
+
+		api.GET("/quest/:id", questHandler.GetQuest)
 	}
 
 	return r
