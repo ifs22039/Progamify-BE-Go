@@ -14,7 +14,12 @@ type LessonRepository interface {
 }
 
 type lessonRepository struct {
-	db *gorm.DB
+	db       *gorm.DB
+	userRepo UserRepository
+}
+
+func NewLessonRepository(db *gorm.DB, userRepo UserRepository) LessonRepository {
+	return &lessonRepository{db, userRepo}
 }
 
 func (l *lessonRepository) AddTakeLesson(topicID uint, lessonID uint, userID uint) (*model.TakeLesson, error) {
@@ -32,17 +37,13 @@ func (l *lessonRepository) AddTakeLesson(topicID uint, lessonID uint, userID uin
 			return nil, err
 		}
 
-		var user model.User
-		l.db.Where("id = ?", userID).First(&user)
-
 		var lesson model.Lesson
 		l.db.Where("id = ?", lessonID).First(&lesson)
 
-		user.TotalExp = user.TotalExp + lesson.Exp
-
-		err = l.db.Save(&user).Error
+		err = l.userRepo.AddExp(userID, lesson.Exp)
 
 		if err != nil {
+
 			return nil, err
 		}
 
@@ -71,8 +72,4 @@ func (l *lessonRepository) FindById(id uint) (*model.Lesson, error) {
 	}
 
 	return &lesson, err
-}
-
-func NewLessonRepository(db *gorm.DB) LessonRepository {
-	return &lessonRepository{db}
 }

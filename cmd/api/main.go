@@ -20,8 +20,8 @@ func main() {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
 	topicRepo := repository.NewTopicRepository(db)
-	lessonRepo := repository.NewLessonRepository(db)
-	exerciseRepo := repository.NewExerciseRepository(db)
+	lessonRepo := repository.NewLessonRepository(db, userRepo)
+	exerciseRepo := repository.NewExerciseRepository(db, userRepo)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo)

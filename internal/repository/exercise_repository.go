@@ -14,10 +14,23 @@ type ExerciseRepository interface {
 }
 
 type exerciseRepository struct {
-	db *gorm.DB
+	db       *gorm.DB
+	userRepo UserRepository
+}
+
+func NewExerciseRepository(db *gorm.DB, userRepo UserRepository) ExerciseRepository {
+	return &exerciseRepository{db, userRepo}
 }
 
 func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitExerciseRequest) (*model.TakeExercise, error) {
+	//var takeExercise model.TakeExercise
+	//
+	//err := e.db.Where("user_id = ? AND exercise_id = ?", userID, request.ExerciseID).First(&takeExercise).Error
+	//
+	//if err == nil {
+	//	return &takeExercise, errors.New("This user already take the exercise")
+	//}
+
 	var exercise model.Exercise
 
 	err := e.db.Preload("Questions.Answers").First(&exercise, request.ExerciseID).Error
@@ -39,8 +52,11 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 	takeExerciseAnswer := make(map[int]interface{})
 	totalExp := 0
 	totalPoint := 0
+	rewardExp := 0
+	rewardPoint := 0
 	var totalCorrect float64 = 0
 
+	//Grading
 	for key, value := range answersJSON {
 		detail := value.(map[string]interface{})
 
@@ -54,6 +70,8 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 
 		exp := 0
 		point := 0
+		rewardExp += question.Exp
+		rewardPoint += question.Point
 
 		if question.Type == "multiple_choice" {
 			var correctAnswer model.ExAnswer
@@ -169,6 +187,8 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 				"user_answer_index":    detail["index_jawaban"],
 				"correct_answer_index": correctAnswer.Content,
 			}
+		} else if question.Type == "multiple_answer" {
+
 		}
 	}
 
@@ -191,6 +211,26 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 		TotalCorrect:  int(totalCorrect),
 		TotalExp:      totalExp,
 		TotalPoint:    totalPoint,
+		RewardExp:     rewardExp,
+		RewardPoint:   rewardPoint,
+	}
+
+	err = e.userRepo.AddPoint(userID, totalPoint)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.userRepo.AddExp(userID, totalPoint)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.userRepo.CheckLevel(userID)
+
+	if err != nil {
+		return nil, err
 	}
 
 	err = e.db.Create(&newTakeExercise).Error
@@ -211,8 +251,4 @@ func (e *exerciseRepository) FindById(id uint) (*model.Exercise, error) {
 	}
 
 	return &exercise, err
-}
-
-func NewExerciseRepository(db *gorm.DB) ExerciseRepository {
-	return &exerciseRepository{db}
 }

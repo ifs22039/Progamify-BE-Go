@@ -17,4 +17,6 @@ type TakeExercise struct {
 	TotalQuestion int             `json:"total_question"`
 	TotalExp      int             `json:"total_exp"`
 	TotalPoint    int             `json:"total_point"`
+	RewardExp     int             `json:"reward_exp"`
+	RewardPoint   int             `json:"reward_point"`
 }
