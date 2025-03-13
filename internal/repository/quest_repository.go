@@ -3,6 +3,7 @@ package repository
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 type QuestRepository interface {
 	GetQuestByUserID(userID uint) (*model.Quest, error)
 	GetDifficultyByLevel(levelId uint) string
+	AddTakeQuest(userID uint, request model.SubmitQuestRequest) (*model.TakeQuest, error)
 }
 
 type questRepository struct {
@@ -80,11 +82,11 @@ func (qr *questRepository) GetDifficultyByLevel(levelId uint) string {
 	}
 }
 
-func NewQuestRepository(db *gorm.DB) QuestRepository {
-	return &questRepository{db: db}
+func NewQuestRepository(db *gorm.DB, userRepo UserRepository) QuestRepository {
+	return &questRepository{db, userRepo}
 }
 
-func (qr *questRepository) submitQuest(userID uint, request model.SubmitQuestRequest) (*model.TakeQuest, error) {
+func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRequest) (*model.TakeQuest, error) {
 
 	var quest model.Quest
 
@@ -108,7 +110,7 @@ func (qr *questRepository) submitQuest(userID uint, request model.SubmitQuestReq
 
 	var question model.Quest
 
-	err = qr.db.Preload("Answers").First(&quest, detail["question_id"]).Error
+	err = qr.db.Preload("Answers").First(&question, detail["question_id"]).Error
 
 	if err != nil {
 		return nil, err
@@ -120,6 +122,7 @@ func (qr *questRepository) submitQuest(userID uint, request model.SubmitQuestReq
 	rewardPoint += question.Point
 
 	if question.Type == "multiple_choice" {
+		fmt.Println("DEBUG: Iterating over question.Answers:")
 		var correctAnswer model.QuestAnswer
 		var correctAnswerIndex int
 		for index, item := range question.Answers {
@@ -235,6 +238,8 @@ func (qr *questRepository) submitQuest(userID uint, request model.SubmitQuestReq
 		}
 	} else if question.Type == "multiple_answer" {
 
+	} else {
+		fmt.Println("DEBUG: Question type didn't detect")
 	}
 
 	var score float64
@@ -252,13 +257,18 @@ func (qr *questRepository) submitQuest(userID uint, request model.SubmitQuestReq
 	newTakeQuest := model.TakeQuest{
 		QuestID:    	 quest.ID,
 		UserID:        userID,
-		Answers:       answerDetail,
+		Answer:       answerDetail,
 		Score:         score,
 		IsCorrect:  	 is_correct,
 		RewardExp:     rewardExp,
 		RewardPoint:   rewardPoint,
 	}
 
+	fmt.Printf("Debug:\n QuestID: %v,\n UserID: %v,\n Answers: %v,\n Score:%v,\n IsCorrect:%v,\n RewardExp:%v,\n RewardPoint:%v,\n", quest.ID, userID, answerDetail, score, is_correct, rewardExp, rewardPoint)
+	fmt.Printf("takeQuestAnswer: %+v\n", takeQuestAnswer)
+	if qr.userRepo == nil {
+    fmt.Printf("userRepo nil")
+	}
 	err = qr.userRepo.AddPoint(userID, rewardPoint)
 
 	if err != nil {

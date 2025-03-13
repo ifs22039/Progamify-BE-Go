@@ -3,6 +3,7 @@ package routes
 import (
 	"boysitorus/Progamify-Restful-API/internal/handler"
 	"boysitorus/Progamify-Restful-API/internal/middleware"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -42,6 +43,7 @@ func SetupRoutes(
 		api.GET("/leaderboard", leaderboardHandler.GetLeaderboard)
 
 		api.GET("/quest/:id", questHandler.GetQuest)
+		api.POST("/quest/submit", questHandler.SubmitQuest)
 	}
 
 	return r
