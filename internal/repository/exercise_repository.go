@@ -4,6 +4,7 @@ import (
 	"boysitorus/Progamify-Restful-API/internal/model"
 	"boysitorus/Progamify-Restful-API/pkg/utils"
 	"encoding/json"
+	"fmt"
 	"gorm.io/gorm"
 	"strings"
 )
@@ -188,7 +189,70 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 				"correct_answer_index": correctAnswer.Content,
 			}
 		} else if question.Type == "multiple_answer" {
+			point := question.Point
+			exp := question.Exp
 
+			var userAnswers []int
+			for _, val := range detail["answers"].([]interface{}) {
+				answer := val.(map[string]interface{})
+				if answerID, ok := answer["answer_id"].(float64); ok {
+					userAnswers = append(userAnswers, int(answerID))
+				}
+			}
+
+			var jawabanUserBenar []int
+
+			var correctAnswers []int
+			var correctAnswersIndex []int
+			for index, item := range question.Answers {
+				if item.IsCorrect {
+					correctAnswers = append(correctAnswers, int(item.ID))
+					correctAnswersIndex = append(correctAnswersIndex, index)
+					for _, ans := range userAnswers {
+						if ans == int(item.ID) {
+							jawabanUserBenar = append(jawabanUserBenar, int(item.ID))
+						}
+					}
+				}
+			}
+
+			var countJawabanBenar = len(jawabanUserBenar)
+			var countJawabanSalah = len(userAnswers) - len(jawabanUserBenar)
+
+			var expGained int = 0
+			var pointGained int = 0
+
+			if countJawabanBenar == len(correctAnswers) && len(correctAnswers) == len(userAnswers) {
+				expGained = exp
+				pointGained = point
+				totalCorrect += 1
+			} else {
+				expEachAns := exp / len(correctAnswers)
+				pointEachAns := point / len(correctAnswers)
+				if countJawabanBenar == countJawabanSalah || countJawabanSalah > countJawabanBenar {
+					fmt.Println("Condition 1")
+					expGained = 0
+					pointGained = 0
+				} else if countJawabanBenar > countJawabanSalah {
+					fmt.Println("Condition 2")
+					expGained = (expEachAns * countJawabanBenar) - (expEachAns * countJawabanSalah)
+					pointGained = (pointEachAns * countJawabanBenar) - (pointEachAns * countJawabanSalah)
+					totalCorrect += 1
+				}
+			}
+
+			totalExp += expGained
+			totalPoint += pointGained
+
+			takeExerciseAnswer[key] = map[string]interface{}{
+				"question_id":            question.ID,
+				"feedback":               question.Feedback,
+				"exp_gained":             exp,
+				"point_gained":           point,
+				"correct_answer_id":      correctAnswers,
+				"user_answer_id":         userAnswers,
+				"user_correct_answer_id": jawabanUserBenar,
+			}
 		}
 	}
 
