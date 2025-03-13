@@ -118,8 +118,8 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 
 	exp := 0
 	point := 0
-	rewardExp += question.Exp
-	rewardPoint += question.Point
+	// rewardExp += question.Exp
+	// rewardPoint += question.Point
 
 	if question.Type == "multiple_choice" {
 		fmt.Println("DEBUG: Iterating over question.Answers:")
