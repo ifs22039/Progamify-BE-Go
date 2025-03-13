@@ -42,5 +42,5 @@ func main() {
 	// Initialize Gin router
 	r := routes.SetupRoutes(authHandler, userHandler, topicHandler, lessonHandler, exerciseHandler, leaderboardHandler)
 
-	log.Fatal(r.Run(":8080"))
+	log.Fatal(r.Run("0.0.0.0:8080"))
 }
