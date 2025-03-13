@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"boysitorus/Progamify-Restful-API/internal/model"
 	"boysitorus/Progamify-Restful-API/internal/service"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -30,4 +31,23 @@ func (h *ExerciseHandler) GetExercise(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, exercise)
+}
+
+func (h *ExerciseHandler) SubmitExercise(c *gin.Context) {
+	userId := c.MustGet("userId").(uint)
+	var request model.SubmitExerciseRequest
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	takeExercise, err := h.exerciseService.AddTakeExercise(userId, request)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to submit exercise"})
+		return
+	}
+	// Return response ke client
+	c.JSON(http.StatusOK, takeExercise)
 }

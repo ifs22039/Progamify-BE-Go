@@ -35,9 +35,16 @@ func (h *TopicHandler) GetTopic(c *gin.Context) {
 		return
 	}
 
+	exercisesTaken, err := h.topicService.GetExercisesTakenByUserId(topic.ID, userId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Lesson Taken not found"})
+		return
+	}
+
 	topicWithLessonsTaken := map[string]interface{}{
-		"topic":                       topic,
-		"lessons_taken_in_this_topic": lessonsTaken,
+		"topic":                         topic,
+		"lessons_taken_in_this_topic":   lessonsTaken,
+		"exercises_taken_in_this_topic": exercisesTaken,
 	}
 
 	c.JSON(http.StatusOK, topicWithLessonsTaken)
