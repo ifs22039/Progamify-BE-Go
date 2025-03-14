@@ -102,6 +102,7 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 				"user_answer_index":    detail["index_jawaban"],
 				"correct_answer_id":    correctAnswer.ID,
 				"correct_answer_index": correctAnswerIndex,
+				"type":                 question.Type,
 			}
 		} else if question.Type == "true_false" {
 			correctAnswer := question.Answers[0]
@@ -133,6 +134,7 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 				"correct_answer":       correctAnswer.Content,
 				"user_answer_index":    detail["index_jawaban"],
 				"correct_answer_index": correctAnswerIndex,
+				"type":                 question.Type,
 			}
 		} else if question.Type == "short_answer" {
 			correctAnswer := question.Answers[0]
@@ -154,6 +156,7 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 				"point_gained":         point,
 				"user_answer_index":    detail["index_jawaban"],
 				"correct_answer_index": correctAnswer.Content,
+				"type":                 question.Type,
 			}
 		} else if question.Type == "essay" {
 			correctAnswer := question.Answers[0]
@@ -187,6 +190,7 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 				"point_gained":         point,
 				"user_answer_index":    detail["index_jawaban"],
 				"correct_answer_index": correctAnswer.Content,
+				"type":                 question.Type,
 			}
 		} else if question.Type == "multiple_answer" {
 			point := question.Point
@@ -247,11 +251,14 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 			takeExerciseAnswer[key] = map[string]interface{}{
 				"question_id":            question.ID,
 				"feedback":               question.Feedback,
-				"exp_gained":             exp,
-				"point_gained":           point,
+				"exp_gained":             expGained,
+				"point_gained":           pointGained,
 				"correct_answer_id":      correctAnswers,
 				"user_answer_id":         userAnswers,
 				"user_correct_answer_id": jawabanUserBenar,
+				"correct_answer_index":   correctAnswersIndex,
+				"user_answer_index":      detail["index_jawaban"],
+				"type":                   question.Type,
 			}
 		}
 	}
