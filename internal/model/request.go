@@ -26,3 +26,8 @@ type SubmitExerciseRequest struct {
 	ExerciseID uint                `json:"exercise_id" binding:"required"`
 	Answers    map[int]interface{} `json:"answers" binding:"required"`
 }
+
+type SubmitQuestRequest struct {
+	QuestID    uint 								`json:"quest_id" binding:"required"`
+	Answer 	   interface{}					`json:"answer" binding:"required"`
+}

@@ -22,7 +22,7 @@ func main() {
 	topicRepo := repository.NewTopicRepository(db)
 	lessonRepo := repository.NewLessonRepository(db, userRepo)
 	exerciseRepo := repository.NewExerciseRepository(db, userRepo)
-	questRepo := repository.NewQuestRepository(db)
+	questRepo := repository.NewQuestRepository(db, userRepo)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo)
