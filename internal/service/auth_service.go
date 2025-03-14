@@ -40,7 +40,6 @@ func (s *authService) Login(email, password string) (string, *model.User, error)
 }
 
 func (s *authService) Register(req *model.RegisterRequest) (*model.User, error) {
-	// Check if email already exists
 	exists, err := s.userRepo.ExistsByEmail(req.Email)
 	if err != nil {
 		return nil, fmt.Errorf("error checking email: %v", err)
@@ -49,13 +48,11 @@ func (s *authService) Register(req *model.RegisterRequest) (*model.User, error) 
 		return nil, fmt.Errorf("email already exists")
 	}
 
-	// Hash the password (similar to Laravel's Hash::make)
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
 		return nil, fmt.Errorf("error hashing password: %v", err)
 	}
 
-	// Create user model
 	user := &model.User{
 		Name:       req.Name,
 		Email:      req.Email,
@@ -67,7 +64,6 @@ func (s *authService) Register(req *model.RegisterRequest) (*model.User, error) 
 		LevelId:    1,
 	}
 
-	// Save user to database
 	err = s.userRepo.Create(user)
 	if err != nil {
 		return nil, fmt.Errorf("error creating user: %v", err)
