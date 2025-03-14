@@ -122,7 +122,7 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 	// rewardPoint += question.Point
 
 	if question.Type == "multiple_choice" {
-		fmt.Println("DEBUG: Iterating over question.Answers:")
+		fmt.Println("DEBUG: Iterating over multiple choice")
 		var correctAnswer model.QuestAnswer
 		var correctAnswerIndex int
 		for index, item := range question.Answers {
@@ -131,6 +131,9 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 				correctAnswerIndex = index
 			}
 		}
+
+		fmt.Printf("Debug: detail[\"answer_id\"] value: %v, type: %T\n", detail["answer_id"], detail["answer_id"])
+
 
 		if int(correctAnswer.ID) == int(detail["answer_id"].(float64)) {
 			exp = exp + question.Exp
@@ -184,7 +187,7 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 		}
 	} else if question.Type == "short_answer" {
 		correctAnswer := question.Answers[0]
-		jawabanUser := detail["index_jawaban"].(string)
+		jawabanUser := detail["answer_text"].(string)
 
 		if strings.ToLower(correctAnswer.Content) == strings.ToLower(jawabanUser) {
 			exp = exp + question.Exp
@@ -201,7 +204,8 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 			"exp_gained":           exp,
 			"point_gained":         point,
 			"user_answer_index":    detail["index_jawaban"],
-			"correct_answer_index": correctAnswer.Content,
+			"user_answer":          detail["answer_text"],
+			"correct_answer":       correctAnswer.Content,
 		}
 	} else if question.Type == "essay" {
 		correctAnswer := question.Answers[0]
@@ -235,6 +239,8 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 			"point_gained":         point,
 			"user_answer_index":    detail["index_jawaban"],
 			"correct_answer_index": correctAnswer.Content,
+			"user_answer":          detail["answer_text"],
+			"correct_answer":       correctAnswer.Content,
 		}
 	} else if question.Type == "multiple_answer" {
 
