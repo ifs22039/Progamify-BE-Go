@@ -1,0 +1,28 @@
+package handler
+
+import (
+	"boysitorus/Progamify-Restful-API/internal/model"
+	"boysitorus/Progamify-Restful-API/internal/service"
+	"github.com/gin-gonic/gin"
+	"net/http"
+)
+
+type LevelHandler struct {
+	levelService service.LevelService
+}
+
+func NewLevelHandler(levelService service.LevelService) *LevelHandler {
+	return &LevelHandler{levelService}
+}
+
+func (h *LevelHandler) GetLevel(c *gin.Context) {
+	levelId := c.MustGet("levelId").(uint)
+
+	level, err := h.levelService.GetLevel(levelId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "level not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, level)
+}
