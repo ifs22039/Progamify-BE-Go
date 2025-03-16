@@ -10,7 +10,6 @@ import (
 type LevelHandler struct {
 	levelService service.LevelService
 }
-
 func NewLevelHandler(levelService service.LevelService) *LevelHandler {
 	return &LevelHandler{levelService}
 }
