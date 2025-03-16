@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"boysitorus/Progamify-Restful-API/internal/model"
 	"boysitorus/Progamify-Restful-API/internal/service"
 	"github.com/gin-gonic/gin"
 	"net/http"
