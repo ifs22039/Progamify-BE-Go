@@ -47,6 +47,7 @@ func SetupRoutes(
 		api.POST("/quest/submit", questHandler.SubmitQuest)
 
 		api.GET("/level/:id", levelHandler.GetLevel)
+		api.GET("/level/user/:id", levelHandler.GetLevelByUserId)
 	}
 
 	return r
