@@ -1,17 +1,27 @@
-# Gunakan base image Go
-FROM golang:1.21
+# Menggunakan image Go resmi sebagai base image
+FROM golang:1.20 AS builder
 
-# Set work directory
+# Set working directory
 WORKDIR /app
 
-# Copy project files
+# Menyalin go.mod dan go.sum untuk mengelola dependensi
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Menyalin seluruh kode sumber ke dalam container
 COPY . .
 
-# Install dependencies & build
-RUN go mod tidy
-RUN go build -o main .
+# Membangun aplikasi
+RUN go build -o myapp .
 
-# Expose port yang digunakan
+# Menggunakan image minimal untuk menjalankan aplikasi
+FROM alpine:latest
+
+# Menyalin binary dari stage builder
+COPY --from=builder /app/myapp .
+
+# Menentukan port yang akan digunakan
 EXPOSE 8080
 
-CMD [".cmd/api/main"]
+# Menjalankan aplikasi
+CMD ["./myapp"]

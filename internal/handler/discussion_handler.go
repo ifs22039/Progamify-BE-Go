@@ -3,6 +3,7 @@ package handler
 import (
 	"boysitorus/Progamify-Restful-API/internal/model"
 	"boysitorus/Progamify-Restful-API/internal/service"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -31,13 +32,21 @@ func (h *DiscussionHandler) GetDiscussionsByLessonID(c *gin.Context) {
 }
 
 func (h *DiscussionHandler) CreateDiscussion(c *gin.Context) {
+	userID := c.MustGet("userId").(uint)
+
 	var discussion model.Discussion
+
 	if err := c.ShouldBindJSON(&discussion); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		fmt.Println(err.Error())
 		return
 	}
+
+	discussion.UserID = userID
+
 	if err := h.service.CreateDiscussion(&discussion); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		fmt.Println(err.Error())
 		return
 	}
 	c.JSON(http.StatusCreated, discussion)
