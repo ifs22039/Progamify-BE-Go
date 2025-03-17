@@ -5,7 +5,7 @@ import (
 )
 
 type Config struct {
-	DBHost            string `mapstructure:"DBHost"`
+	DBHost            string `mapstructure:"DB_Host"`
 	DBPort            string `mapstructure:"DB_PORT"`
 	DBUser            string `mapstructure:"DB_USER"`
 	DBPassword        string `mapstructure:"DB_PASSWORD"`
