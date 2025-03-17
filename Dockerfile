@@ -11,8 +11,8 @@ RUN go mod download
 # Menyalin seluruh kode sumber ke dalam container
 COPY . .
 
-# Membangun aplikasi
-RUN go build -o myapp .
+# Membangun aplikasi dari file main.go
+RUN go build -o myapp ./cmd/api/main.go
 
 # Menggunakan image minimal untuk menjalankan aplikasi
 FROM alpine:latest
