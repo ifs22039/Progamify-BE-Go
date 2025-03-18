@@ -50,6 +50,7 @@ func (h *LessonHandler) GetLesson(c *gin.Context) {
 		}
 
 		c.JSON(http.StatusOK, mergedLesson)
+		return
 	}
 
 	c.JSON(http.StatusOK, lesson)
