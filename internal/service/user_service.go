@@ -8,10 +8,15 @@ import (
 type UserService interface {
 	GetUser(id uint) (*model.User, error)
 	UpdateUser(id uint, req *model.UpdateUserRequest) (*model.User, error)
+	GetLessonTaken(userID uint) (int, error)
 }
 
 type userService struct {
 	userRepo repository.UserRepository
+}
+
+func (s *userService) GetLessonTaken(userID uint) (int, error) {
+	return s.userRepo.LessonTaken(userID)
 }
 
 func NewUserService(userRepo repository.UserRepository) UserService {

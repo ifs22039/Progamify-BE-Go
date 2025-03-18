@@ -15,10 +15,23 @@ type UserRepository interface {
 	AddPoint(userID uint, point int) error
 	AddExp(userID uint, exp int) error
 	CheckLevel(userID uint) error
+	LessonTaken(userID uint) (int, error)
 }
 
 type userRepository struct {
 	db *gorm.DB
+}
+
+func (r *userRepository) LessonTaken(userID uint) (int, error) {
+	var count int64
+
+	if err := r.db.Model(&model.TakeLesson{}).
+		Where("user_id = ?", userID).
+		Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return int(count), nil
 }
 
 func NewUserRepository(db *gorm.DB) UserRepository {
