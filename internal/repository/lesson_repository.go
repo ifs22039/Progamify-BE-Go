@@ -51,7 +51,9 @@ func (l *lessonRepository) AddTakeLesson(topicID uint, lessonID uint, userID uin
 
 		return &takeLesson, err
 	}
-	return &takeLesson, err
+
+	//tidak mengembalikan apa apa jika sudah mengambil lesson
+	return nil, nil
 }
 
 func (l *lessonRepository) FindById(id uint) (*model.Lesson, error) {

@@ -30,10 +30,26 @@ func (h *LessonHandler) GetLesson(c *gin.Context) {
 		return
 	}
 
-	_, err = h.lessonService.AddTakeLesson(lesson.TopicID, lesson.ID, userID)
+	takeLesson, err := h.lessonService.AddTakeLesson(lesson.TopicID, lesson.ID, userID)
+
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Failed to record take lesson"})
 		return
+	}
+
+	if takeLesson != nil {
+		mergedLesson := map[string]interface{}{
+			"ID":         lesson.ID,
+			"CreatedAt":  lesson.CreatedAt,
+			"UpdatedAt":  lesson.UpdatedAt,
+			"DeletedAt":  lesson.DeletedAt,
+			"name":       lesson.Name,
+			"content":    lesson.Content,
+			"exp":        lesson.Exp,
+			"takeLesson": takeLesson,
+		}
+
+		c.JSON(http.StatusOK, mergedLesson)
 	}
 
 	c.JSON(http.StatusOK, lesson)
