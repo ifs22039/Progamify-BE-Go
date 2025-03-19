@@ -8,6 +8,8 @@ import (
 type DiscussionService interface {
 	GetDiscussionsByLessonID(lessonID uint) ([]map[string]interface{}, error)
 	CreateDiscussion(discussion *model.Discussion) error
+	GetById(discussionID uint) (*model.Discussion, error)
+	AddReply(reply *model.DiscReply) error
 }
 
 type discussionService struct {
@@ -16,6 +18,14 @@ type discussionService struct {
 
 func NewDiscussionService(repo repository.DiscussionRepository) DiscussionService {
 	return &discussionService{repo: repo}
+}
+
+func (s *discussionService) AddReply(reply *model.DiscReply) error {
+	return s.repo.AddReply(reply)
+}
+
+func (s *discussionService) GetById(discussionID uint) (*model.Discussion, error) {
+	return s.repo.FindById(discussionID)
 }
 
 func (s *discussionService) GetDiscussionsByLessonID(lessonID uint) ([]map[string]interface{}, error) {

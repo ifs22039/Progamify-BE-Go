@@ -24,7 +24,28 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	lessonTaken, err := h.userService.GetLessonTaken(userId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "error finding lesson taken for user"})
+		return
+	}
+
+	response := map[string]interface{}{
+		"ID":                 user.ID,
+		"CreatedAt":          user.CreatedAt,
+		"UpdatedAt":          user.UpdatedAt,
+		"DeletedAt":          user.DeletedAt,
+		"name":               user.Name,
+		"email":              user.Email,
+		"nim":                user.Nim,
+		"angkatan":           user.Angkatan,
+		"total_point":        user.TotalPoint,
+		"total_exp":          user.TotalExp,
+		"level_id":           user.LevelId,
+		"total_lesson_taken": lessonTaken,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *UserHandler) UpdateUser(c *gin.Context) {

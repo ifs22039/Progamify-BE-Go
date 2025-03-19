@@ -17,6 +17,22 @@ func NewDiscussionHandler(service service.DiscussionService) *DiscussionHandler 
 	return &DiscussionHandler{service: service}
 }
 
+func (h *DiscussionHandler) GetById(c *gin.Context) {
+	discussionID, err := strconv.Atoi(c.Param("discussionID"))
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid discussion ID"})
+		return
+	}
+
+	discussion, err := h.service.GetById(uint(discussionID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, discussion)
+}
+
 func (h *DiscussionHandler) GetDiscussionsByLessonID(c *gin.Context) {
 	lessonID, err := strconv.Atoi(c.Param("lessonID"))
 	if err != nil {
@@ -50,4 +66,26 @@ func (h *DiscussionHandler) CreateDiscussion(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, discussion)
+}
+
+func (h *DiscussionHandler) CreateReply(c *gin.Context) {
+	userID := c.MustGet("userId").(uint)
+
+	var reply model.DiscReply
+
+	if err := c.ShouldBindJSON(&reply); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		fmt.Println(err.Error())
+		return
+	}
+
+	reply.UserID = userID
+
+	if err := h.service.AddReply(&reply); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		fmt.Println(err.Error())
+		return
+	}
+	
+	c.JSON(http.StatusCreated, reply)
 }
