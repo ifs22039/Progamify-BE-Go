@@ -159,6 +159,7 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 				"type":                 question.Type,
 			}
 		} else if question.Type == "essay" {
+			fmt.Println("Ada soal essay nih")
 			correctAnswer := question.Answers[0]
 			jawabanUser := detail["index_jawaban"].(string)
 
@@ -168,7 +169,9 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 
 			for flag {
 				result, err := utils.EssayGrading(correctAnswer.Content, jawabanUser)
+				fmt.Println(err)
 				if err == nil {
+
 					flag = false
 				}
 				similarity = result
