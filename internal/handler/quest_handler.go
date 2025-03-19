@@ -11,10 +11,11 @@ import (
 
 type QuestHandler struct {
 	questService service.QuestService
+	badgeService service.BadgeService
 }
 
-func NewQuestHandler(questService service.QuestService) *QuestHandler {
-	return &QuestHandler{questService}
+func NewQuestHandler(questService service.QuestService, badgeService service.BadgeService) *QuestHandler {
+	return &QuestHandler{questService, badgeService}
 }
 
 func (h *QuestHandler) GetQuest(c *gin.Context) {
@@ -49,6 +50,18 @@ func (h *QuestHandler) SubmitQuest(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to submit exercise"})
 		return
 	}
+
+	badges, err := h.badgeService.CheckAndAssignBadge(userId)
+	if err != nil {
+	}
+
+	response := gin.H{
+		"quest": takeQuest,
+	}
+
+	if len(badges) > 0 {
+		response["badge"] = badges
+	}
 	// Return response ke client
-	c.JSON(http.StatusOK, takeQuest)
+	c.JSON(http.StatusOK, response)
 }
