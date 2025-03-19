@@ -48,7 +48,9 @@ func SetupRoutes(
 		api.POST("/quest/submit", questHandler.SubmitQuest)
 
 		api.POST("/discussions", discussionHandler.CreateDiscussion)
-		api.GET("/discussions/:lessonID", discussionHandler.GetDiscussionsByLessonID)
+		api.GET("/discussions/lesson/:lessonID", discussionHandler.GetDiscussionsByLessonID)
+		api.GET("/discussions/:discussionID", discussionHandler.GetById)
+		api.POST("/discussions/reply", discussionHandler.CreateReply)
 
 		api.GET("/level/:id", levelHandler.GetLevel)
 		api.GET("/level/user/:id", levelHandler.GetLevelByUserId)
