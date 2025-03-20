@@ -132,7 +132,7 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 			}
 		}
 
-		fmt.Printf("Debug: detail[\"answer_id\"] value: %v, type: %T\n", detail["answer_id"], detail["answer_id"])
+		// fmt.Printf("Debug: detail[\"answer_id\"] value: %v, type: %T\n", detail["answer_id"], detail["answer_id"])
 
 
 		if int(correctAnswer.ID) == int(detail["answer_id"].(float64)) {
@@ -270,8 +270,8 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 		RewardPoint:   rewardPoint,
 	}
 
-	fmt.Printf("Debug:\n QuestID: %v,\n UserID: %v,\n Answers: %v,\n Score:%v,\n IsCorrect:%v,\n RewardExp:%v,\n RewardPoint:%v,\n", quest.ID, userID, answerDetail, score, is_correct, rewardExp, rewardPoint)
-	fmt.Printf("takeQuestAnswer: %+v\n", takeQuestAnswer)
+	// fmt.Printf("Debug:\n QuestID: %v,\n UserID: %v,\n Answers: %v,\n Score:%v,\n IsCorrect:%v,\n RewardExp:%v,\n RewardPoint:%v,\n", quest.ID, userID, answerDetail, score, is_correct, rewardExp, rewardPoint)
+	// fmt.Printf("takeQuestAnswer: %+v\n", takeQuestAnswer)
 	if qr.userRepo == nil {
     fmt.Printf("userRepo nil")
 	}
