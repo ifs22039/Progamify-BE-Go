@@ -26,5 +26,22 @@ func (h *AvatarHandler) GetAll(c *gin.Context) {
 }
 
 func (h *AvatarHandler) BuyAvatar(c *gin.Context) {
+	userID := c.MustGet("userId").(uint)
 
+	var request struct {
+		AvatarID uint `json:"avatar_id"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	haveAvatar, err := h.service.BuyAvatar(uint(userID), uint(request.AvatarID))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, haveAvatar)
 }

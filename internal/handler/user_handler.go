@@ -3,8 +3,10 @@ package handler
 import (
 	"boysitorus/Progamify-Restful-API/internal/model"
 	"boysitorus/Progamify-Restful-API/internal/service"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"net/http"
 )
 
@@ -68,5 +70,32 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
+	c.JSON(http.StatusOK, user)
+}
+
+func (h *UserHandler) ChangeAvatar(c *gin.Context) {
+	userID := c.MustGet("userId").(uint)
+
+	var request struct {
+		AvatarID uint `json:"avatar_id"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	// Call the repository function to change avatar
+	user, err := h.userService.ChangeAvatar(uint(userID), request.AvatarID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	// Respond with updated user
 	c.JSON(http.StatusOK, user)
 }

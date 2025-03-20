@@ -7,7 +7,7 @@ import (
 
 type AvatarService interface {
 	GetAvatarsByUser(userID uint) ([]map[string]interface{}, error)
-	BuyAvatar(haveAvatar *model.HaveAvatar) (model.HaveAvatar, error)
+	BuyAvatar(userID uint, avatarID uint) (*model.HaveAvatar, error)
 }
 
 type avatarService struct {
@@ -18,8 +18,8 @@ func (as *avatarService) GetAvatarsByUser(userID uint) ([]map[string]interface{}
 	return as.repo.GetAvatarsByUser(userID)
 }
 
-func (as *avatarService) BuyAvatar(haveAvatar *model.HaveAvatar) (model.HaveAvatar, error) {
-	return as.repo.BuyAvatar(haveAvatar)
+func (as *avatarService) BuyAvatar(userID uint, avatarID uint) (*model.HaveAvatar, error) {
+	return as.repo.BuyAvatar(userID, avatarID)
 }
 
 func NewAvatarService(repo repository.AvatarRepository) AvatarService {

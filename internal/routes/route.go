@@ -35,6 +35,7 @@ func SetupRoutes(
 		api.GET("/users/current", userHandler.GetCurrentUser)
 		api.PUT("/users/current", userHandler.UpdateUser)
 		api.DELETE("/users/logout", authHandler.Logout)
+		api.POST("/users/avatar", userHandler.ChangeAvatar)
 
 		api.GET("/topics", topicHandler.ListTopics)
 		api.GET("/topics/:id", topicHandler.GetTopic)
@@ -58,6 +59,7 @@ func SetupRoutes(
 		api.GET("/level/user/:id", levelHandler.GetLevelByUserId)
 
 		api.GET("/avatars", avatarHandler.GetAll)
+		api.POST("/avatars/buy", avatarHandler.BuyAvatar)
 
 		api.GET("/badge/:id", badgeHandler.GetBadge)
 		api.POST("/badge/add", badgeHandler.AddHaveBadge)

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"boysitorus/Progamify-Restful-API/internal/model"
+	"errors"
 	"gorm.io/gorm"
 )
 
@@ -16,10 +17,15 @@ type UserRepository interface {
 	AddExp(userID uint, exp int) error
 	CheckLevel(userID uint) error
 	LessonTaken(userID uint) (int, error)
+	ChangeAvatar(userID uint, avatarID uint) (*model.User, error)
 }
 
 type userRepository struct {
 	db *gorm.DB
+}
+
+func NewUserRepository(db *gorm.DB) UserRepository {
+	return &userRepository{db}
 }
 
 func (r *userRepository) LessonTaken(userID uint) (int, error) {
@@ -32,10 +38,6 @@ func (r *userRepository) LessonTaken(userID uint) (int, error) {
 	}
 
 	return int(count), nil
-}
-
-func NewUserRepository(db *gorm.DB) UserRepository {
-	return &userRepository{db}
 }
 
 func (r *userRepository) CheckLevel(userID uint) error {
@@ -133,4 +135,33 @@ func (r *userRepository) GetTopUsersByExp(limit int) ([]model.User, error) {
 	var users []model.User
 	err := r.db.Order("total_exp DESC").Limit(limit).Preload("Avatar").Find(&users).Error
 	return users, err
+}
+
+func (r *userRepository) ChangeAvatar(userID uint, avatarID uint) (*model.User, error) {
+	var user model.User
+	var count int64
+
+	err := r.db.Table("have_avatars").
+		Where("user_id = ? AND avatar_id = ?", userID, avatarID).
+		Count(&count).Error
+
+	if err != nil {
+		return &model.User{}, err
+	}
+
+	if count == 0 {
+		return &model.User{}, errors.New("avatar not owned by user")
+	}
+
+	err = r.db.First(&user, userID).Error
+	if err != nil {
+		return &model.User{}, err
+	}
+
+	err = r.db.Model(&user).Update("avatar_id", avatarID).Error
+	if err != nil {
+		return &model.User{}, err
+	}
+
+	return &user, nil
 }

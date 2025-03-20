@@ -9,10 +9,15 @@ type UserService interface {
 	GetUser(id uint) (*model.User, error)
 	UpdateUser(id uint, req *model.UpdateUserRequest) (*model.User, error)
 	GetLessonTaken(userID uint) (int, error)
+	ChangeAvatar(userID uint, avatarID uint) (*model.User, error)
 }
 
 type userService struct {
 	userRepo repository.UserRepository
+}
+
+func (s *userService) ChangeAvatar(userID uint, avatarID uint) (*model.User, error) {
+	return s.userRepo.ChangeAvatar(userID, avatarID)
 }
 
 func (s *userService) GetLessonTaken(userID uint) (int, error) {
