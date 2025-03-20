@@ -4,6 +4,7 @@ import (
 	"boysitorus/Progamify-Restful-API/internal/model"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"gorm.io/gorm"
@@ -102,6 +103,10 @@ func (r *badgeRepository) GetBadges(userId uint) ([]model.UserBadge, error) {
 		userBadges = append(userBadges, badge)
 	}
 
+	sort.Slice(userBadges, func(i, j int) bool {
+		return userBadges[i].ID < userBadges[j].ID
+	})
+
 	return userBadges, nil
 }
 
@@ -122,10 +127,18 @@ func (r *badgeRepository) AssignBadgeIfEligible(userId uint) ([]model.HaveBadge,
 
 	// Helper function untuk menambahkan badge jika belum dimiliki
 	addBadgeIfNotOwned := func(badgeID uint) error {
-		var count int64
-		r.db.Model(&model.HaveBadge{}).Where("user_id = ? AND badge_id = ?", userId, badgeID).Count(&count)
+		var countQuestBeginner int64
+		r.db.Model(&model.HaveBadge{}).Where("user_id = ? AND badge_id = ?", userId, 1).Count(&countQuestBeginner)
 
-		if count == 0 { // ✅ Cek apakah user sudah punya badge ini
+		if countQuestBeginner == 0 { // ✅ Cek apakah user sudah punya badge ini
+			log.Printf("User %d belum memiliki badge %d, menambahkan badge...", userId, badgeID)
+			badge, err := r.AddHaveBadge(userId, badgeID)
+			if err != nil {
+				return err
+			}
+			awardedBadges = append(awardedBadges, *badge)
+		}
+		if badgeID != 1 {
 			badge, err := r.AddHaveBadge(userId, badgeID)
 			if err != nil {
 				return err
@@ -155,46 +168,86 @@ func (r *badgeRepository) AssignBadgeIfEligible(userId uint) ([]model.HaveBadge,
 	}
 
 	// ✅ Perfect Streak (3, 5, 10): hanya jika streak benar baru dimulai setelah salah
-	if len(takeQuests) >= 4 {
-		correctStreak := 0
-		for i := len(takeQuests) - 1; i >= 0; i-- {
-			if takeQuests[i].IsCorrect {
-				correctStreak++
-			} else {
-				break // Harus ada satu false sebelum streak benar
-			}
-		}
+	if len(takeQuests) >= 3 {
+    // Ambil HaveBadge terakhir berdasarkan ID 2,3,4
+    var lastHaveBadge2, lastHaveBadge3, lastHaveBadge4 model.HaveBadge
 
-		if correctStreak == 3 {
-			_ = addBadgeIfNotOwned(3)
+    r.db.Where("user_id = ? AND badge_id = ?", userId, 3).
+        Order("created_at DESC").First(&lastHaveBadge2)
+
+    r.db.Where("user_id = ? AND badge_id = ?", userId, 4).
+        Order("created_at DESC").First(&lastHaveBadge3)
+
+    r.db.Where("user_id = ? AND badge_id = ?", userId, 5).
+        Order("created_at DESC").First(&lastHaveBadge4)
+
+    // Cek takeQuest ke-3 terakhir
+    if len(takeQuests) >= 3 {
+        lastTakeQuest3 := takeQuests[len(takeQuests)-3]
+        if lastTakeQuest3.IsCorrect && takeQuests[len(takeQuests)-2].IsCorrect && takeQuests[len(takeQuests)-1].IsCorrect {
+            if lastHaveBadge2.ID == 0 || lastHaveBadge2.CreatedAt.Before(lastTakeQuest3.CreatedAt) {
+                _ = addBadgeIfNotOwned(3)
+            }
+        }
+    }
+
+    // Cek takeQuest ke-5 terakhir
+    if len(takeQuests) >= 5 {
+        lastTakeQuest5 := takeQuests[len(takeQuests)-5]
+        if lastTakeQuest5.IsCorrect && takeQuests[len(takeQuests)-4].IsCorrect &&
+            takeQuests[len(takeQuests)-3].IsCorrect && takeQuests[len(takeQuests)-2].IsCorrect && takeQuests[len(takeQuests)-1].IsCorrect {
+            if lastHaveBadge3.ID == 0 || lastHaveBadge3.CreatedAt.Before(lastTakeQuest5.CreatedAt) {
+                _ = addBadgeIfNotOwned(4)
+            }
+        }
+    }
+
+    // Cek takeQuest ke-10 terakhir
+    if len(takeQuests) >= 10 {
+        lastTakeQuest10 := takeQuests[len(takeQuests)-10]
+        if lastTakeQuest10.IsCorrect && takeQuests[len(takeQuests)-9].IsCorrect &&
+            takeQuests[len(takeQuests)-8].IsCorrect && takeQuests[len(takeQuests)-7].IsCorrect &&
+            takeQuests[len(takeQuests)-6].IsCorrect && takeQuests[len(takeQuests)-5].IsCorrect &&
+            takeQuests[len(takeQuests)-4].IsCorrect && takeQuests[len(takeQuests)-3].IsCorrect &&
+            takeQuests[len(takeQuests)-2].IsCorrect && takeQuests[len(takeQuests)-1].IsCorrect {
+            if lastHaveBadge4.ID == 0 || lastHaveBadge4.CreatedAt.Before(lastTakeQuest10.CreatedAt) {
+                _ = addBadgeIfNotOwned(5)
+            }
+        }
+    }
+	}
+
+
+	// ✅ Unstoppable Challenger: 1 quest per hari selama 7 hari berturut-turut
+	streak := 0
+	var lastDate time.Time
+
+	var lastHaveBadge model.HaveBadge
+	r.db.Where("user_id = ? AND badge_id = ?", userId, 6).
+		Order("created_at DESC").
+		First(&lastHaveBadge)
+
+	for _, tq := range takeQuests {
+		date := tq.CreatedAt.Truncate(24 * time.Hour)
+		if lastDate.IsZero() || date.Sub(lastDate) == 24*time.Hour {
+			streak++
+		} else if date.Sub(lastDate) > 24*time.Hour {
+			streak = 1 // Reset streak jika ada hari yang terlewat
 		}
-		if correctStreak == 5 {
-			_ = addBadgeIfNotOwned(4)
-		}
-		if correctStreak == 10 {
-			_ = addBadgeIfNotOwned(5)
+		lastDate = date
+
+		if streak == 7 {
+			if lastHaveBadge.ID == 0 || lastHaveBadge.CreatedAt.Before(tq.CreatedAt) {
+				if err := addBadgeIfNotOwned(6); err != nil {
+					log.Printf("[ERROR] Failed to assign badge: %v", err)
+					return nil, err
+				}
+				log.Printf("[INFO] Badge assigned successfully to user_id: %d", userId)
+			}
+			streak = 0
 		}
 	}
 
-	// ✅ Unstoppable Challenger: minimal 1 quest per hari selama 7 hari berturut-turut, lalu di-reset
-	streakDays := 1
-	lastAwardedDay := time.Time{} // Untuk mereset streak setelah badge diberikan
-	for i := 1; i < len(takeQuests); i++ {
-		diffHours := takeQuests[i].CreatedAt.Sub(takeQuests[i-1].CreatedAt).Hours()
-		if diffHours <= 24 {
-			streakDays++
-		} else {
-			streakDays = 1 // Reset jika ada jeda lebih dari 1 hari
-		}
-
-		if streakDays >= 7 {
-			if lastAwardedDay.IsZero() || takeQuests[i].CreatedAt.Sub(lastAwardedDay).Hours() > 24 {
-				_ = addBadgeIfNotOwned(6)
-				lastAwardedDay = takeQuests[i].CreatedAt // Reset streak setelah badge diberikan
-			}
-			streakDays = 0 // Mulai hitung ulang
-		}
-	}
 
 	// Jika tidak ada badge yang diberikan, return nil
 	if len(awardedBadges) == 0 {
