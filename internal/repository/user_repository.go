@@ -73,7 +73,7 @@ func (r *userRepository) FindByEmail(email string) (*model.User, error) {
 
 func (r *userRepository) FindById(id uint) (*model.User, error) {
 	var user model.User
-	err := r.db.First(&user, id).Error
+	err := r.db.Preload("Avatar").First(&user, id).Error
 	return &user, err
 }
 
@@ -131,6 +131,6 @@ func (r *userRepository) AddPoint(userID uint, point int) error {
 
 func (r *userRepository) GetTopUsersByExp(limit int) ([]model.User, error) {
 	var users []model.User
-	err := r.db.Order("total_exp DESC").Limit(limit).Find(&users).Error
+	err := r.db.Order("total_exp DESC").Limit(limit).Preload("Avatar").Find(&users).Error
 	return users, err
 }
