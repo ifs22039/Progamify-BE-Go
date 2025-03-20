@@ -169,6 +169,7 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 
 			for flag {
 				result, err := utils.EssayGrading(correctAnswer.Content, jawabanUser)
+				fmt.Println(result)
 				fmt.Println(err)
 				if err == nil {
 

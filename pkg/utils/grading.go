@@ -3,6 +3,7 @@ package utils
 import (
 	"boysitorus/Progamify-Restful-API/internal/config"
 	"encoding/json"
+	"fmt"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -25,6 +26,7 @@ func EssayGrading(expected string, actual string) (float64, error) {
 	}
 
 	var data []float64
+	fmt.Println(response.StatusCode())
 	if err := json.Unmarshal(response.Body(), &data); err != nil {
 		return 0, err
 	}

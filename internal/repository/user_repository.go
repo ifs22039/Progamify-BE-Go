@@ -84,7 +84,9 @@ func (r *userRepository) Update(user *model.User) error {
 }
 
 func (r *userRepository) Create(user *model.User) error {
-	return r.db.Create(user).Error
+	err := r.db.Create(user).Error
+
+	return err
 }
 
 func (r *userRepository) ExistsByEmail(email string) (bool, error) {
