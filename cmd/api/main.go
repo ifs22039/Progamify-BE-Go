@@ -66,7 +66,7 @@ func main() {
 		discussionHandler,
 		levelHandler,
 		avatarHandler,
-		badgeHandler
+		badgeHandler,
 	)
 
 	log.Fatal(r.Run("0.0.0.0:8080"))
