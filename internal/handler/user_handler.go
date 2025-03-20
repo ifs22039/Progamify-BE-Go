@@ -3,6 +3,7 @@ package handler
 import (
 	"boysitorus/Progamify-Restful-API/internal/model"
 	"boysitorus/Progamify-Restful-API/internal/service"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -24,6 +25,8 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 		return
 	}
 
+	fmt.Println(user)
+
 	lessonTaken, err := h.userService.GetLessonTaken(userId)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "error finding lesson taken for user"})
@@ -42,6 +45,8 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 		"total_point":        user.TotalPoint,
 		"total_exp":          user.TotalExp,
 		"level_id":           user.LevelId,
+		"avatar_id":          user.AvatarID,
+		"detail_avatar":      user.Avatar,
 		"total_lesson_taken": lessonTaken,
 	}
 

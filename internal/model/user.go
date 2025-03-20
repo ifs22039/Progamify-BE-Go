@@ -12,4 +12,6 @@ type User struct {
 	TotalPoint int    `json:"total_point" gorm:"default:0"`
 	TotalExp   int    `json:"total_exp" gorm:"default:0"`
 	LevelId    uint   `json:"level_id" gorm:"not null"`
+	AvatarID   uint   `json:"avatar_id"`
+	Avatar     Avatar `json:"avatar" gorm:"foreignKey:AvatarID;"`
 }
