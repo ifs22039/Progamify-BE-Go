@@ -26,6 +26,7 @@ func main() {
 	discussionRepo := repository.NewDiscussionRepository(db)
 	levelRepo := repository.NewLevelRepository(db)
 	avatarRepo := repository.NewAvatarRepository(db)
+	badgeRepo := repository.NewBadgeRepository(db, userRepo)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo)
@@ -38,6 +39,7 @@ func main() {
 	discussionService := service.NewDiscussionService(discussionRepo)
 	levelService := service.NewLevelService(levelRepo)
 	avatarService := service.NewAvatarService(avatarRepo)
+	badgeService := service.NewBadgeService(badgeRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
@@ -46,13 +48,15 @@ func main() {
 	lessonHandler := handler.NewLessonHandler(lessonService)
 	exerciseHandler := handler.NewExerciseHandler(exerciseService)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardService)
-	questHandler := handler.NewQuestHandler(questService)
+	questHandler := handler.NewQuestHandler(questService, badgeService)
 	discussionHandler := handler.NewDiscussionHandler(discussionService)
 	levelHandler := handler.NewLevelHandler(levelService)
 	avatarHandler := handler.NewAvatarHandler(avatarService)
+	badgeHandler := handler.NewBadgeHandler(badgeService)
 
 	// Initialize Gin router
-	r := routes.SetupRoutes(authHandler,
+	r := routes.SetupRoutes(
+		authHandler,
 		userHandler,
 		topicHandler,
 		lessonHandler,
@@ -62,6 +66,7 @@ func main() {
 		discussionHandler,
 		levelHandler,
 		avatarHandler,
+		badgeHandler
 	)
 
 	log.Fatal(r.Run("0.0.0.0:8080"))

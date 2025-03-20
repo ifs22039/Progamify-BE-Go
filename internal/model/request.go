@@ -31,3 +31,7 @@ type SubmitQuestRequest struct {
 	QuestID    uint 								`json:"quest_id" binding:"required"`
 	Answer 	   interface{}					`json:"answer" binding:"required"`
 }
+
+type AddBadgeRequest struct {
+	BadgeID uint `json:"badge_id" binding:"required"`
+}
