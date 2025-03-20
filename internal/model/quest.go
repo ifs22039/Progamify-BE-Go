@@ -6,6 +6,7 @@ type Quest struct {
 	gorm.Model
 	Title      string        `json:"title" gorm:"size:255;not null"`
 	Content    string        `json:"content" gorm:"size:255;not null"`
+	Timer 		 int 					 `json:"timer" gorm:"not null;"`
 	Point      int           `json:"point" gorm:"not null"`
 	Exp        int           `json:"exp" gorm:"not null"`
 	Difficulty string        `json:"difficulty" gorm:"size:255;not null"`
