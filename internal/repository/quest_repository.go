@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"strings"
 	"time"
@@ -208,8 +209,12 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 			"correct_answer":       correctAnswer.Content,
 		}
 	} else if question.Type == "essay" {
+		fmt.Println("masuk ke essay kita")
 		correctAnswer := question.Answers[0]
-		jawabanUser := detail["index_jawaban"].(string)
+		jawabanUser := detail["answer_text"].(string)
+
+		log.Println("Correct Answer:", correctAnswer.Content) 
+    log.Println("User Answer:", jawabanUser)     
 
 		flag := true
 
@@ -217,6 +222,7 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 
 		for flag {
 			result, err := utils.EssayGrading(correctAnswer.Content, jawabanUser)
+			fmt.Println(err)
 			if err == nil {
 				flag = false
 			}
@@ -238,12 +244,79 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 			"exp_gained":           exp,
 			"point_gained":         point,
 			"user_answer_index":    detail["index_jawaban"],
-			"correct_answer_index": correctAnswer.Content,
+			"correct_answer_index": 0,
 			"user_answer":          detail["answer_text"],
 			"correct_answer":       correctAnswer.Content,
 		}
 	} else if question.Type == "multiple_answer" {
+		point := question.Point
+			exp := question.Exp
 
+			var userAnswers []int
+			for _, val := range detail["answers"].([]interface{}) {
+				answer := val.(map[string]interface{})
+				if answerID, ok := answer["answer_id"].(float64); ok {
+					userAnswers = append(userAnswers, int(answerID))
+				}
+			}
+
+			var jawabanUserBenar []int
+
+			var correctAnswers []int
+			var correctAnswersIndex []int
+			for index, item := range question.Answers {
+				if item.IsCorrect {
+					correctAnswers = append(correctAnswers, int(item.ID))
+					correctAnswersIndex = append(correctAnswersIndex, index)
+					for _, ans := range userAnswers {
+						if ans == int(item.ID) {
+							jawabanUserBenar = append(jawabanUserBenar, int(item.ID))
+						}
+					}
+				}
+			}
+
+			var countJawabanBenar = len(jawabanUserBenar)
+			var countJawabanSalah = len(userAnswers) - len(jawabanUserBenar)
+
+			var expGained int = 0
+			var pointGained int = 0
+
+			if countJawabanBenar == len(correctAnswers) && len(correctAnswers) == len(userAnswers) {
+				expGained = exp
+				pointGained = point
+				is_correct = true
+			} else {
+				expEachAns := exp / len(correctAnswers)
+				pointEachAns := point / len(correctAnswers)
+				if countJawabanBenar == countJawabanSalah || countJawabanSalah > countJawabanBenar {
+					fmt.Println("Condition 1")
+					expGained = 0
+					pointGained = 0
+				} else if countJawabanBenar > countJawabanSalah {
+					fmt.Println("Condition 2")
+					expGained = (expEachAns * countJawabanBenar) - (expEachAns * countJawabanSalah)
+					pointGained = (pointEachAns * countJawabanBenar) - (pointEachAns * countJawabanSalah)
+					is_correct = true
+				}
+			}
+
+			expGained += expGained
+			expGained += pointGained
+
+			takeQuestAnswer = map[string]interface{}{
+				"question_id":            question.ID,
+				"feedback":               question.Feedback,
+				"exp_gained":             expGained,
+				"point_gained":           pointGained,
+				"user_answer_id":         detail["answer_id"],
+				"user_correct_answer_id": jawabanUserBenar,
+				"correct_answer_index":   0,
+				"correct_answers_index" : correctAnswersIndex,
+				"user_answer_index":      detail["index_jawaban"],
+				"type":                   question.Type,
+				"user_answer":          detail["answer_text"],
+			}
 	} else {
 		fmt.Println("DEBUG: Question type didn't detect")
 	}

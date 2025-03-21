@@ -5,6 +5,7 @@ import (
 	"boysitorus/Progamify-Restful-API/internal/model"
 	"boysitorus/Progamify-Restful-API/internal/repository"
 	"boysitorus/Progamify-Restful-API/pkg/utils"
+	"errors"
 	"fmt"
 )
 
@@ -38,14 +39,13 @@ func (s *authService) Login(email, password string) (string, *model.User, error)
 
 	return token, user, nil
 }
-
 func (s *authService) Register(req *model.RegisterRequest) (*model.User, error) {
 	exists, err := s.userRepo.ExistsByEmail(req.Email)
 	if err != nil {
 		return nil, fmt.Errorf("error checking email: %v", err)
 	}
 	if exists {
-		return nil, fmt.Errorf("email already exists")
+		return nil, errors.New("email already exists")
 	}
 
 	hashedPassword, err := utils.HashPassword(req.Password)
@@ -62,6 +62,7 @@ func (s *authService) Register(req *model.RegisterRequest) (*model.User, error) 
 		TotalPoint: 0,
 		TotalExp:   0,
 		LevelId:    1,
+		AvatarID:   req.AvatarID,
 	}
 
 	err = s.userRepo.Create(user)

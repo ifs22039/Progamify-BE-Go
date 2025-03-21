@@ -20,6 +20,7 @@ type RegisterRequest struct {
 	Angkatan             int    `json:"angkatan" binding:"required"`
 	Password             string `json:"password" binding:"required,min=8"`
 	PasswordConfirmation string `json:"password_confirmation" binding:"required,eqfield=Password"`
+	AvatarID             uint    `json:"avatar_id" binding:"required"`
 }
 
 type SubmitExerciseRequest struct {
@@ -28,8 +29,8 @@ type SubmitExerciseRequest struct {
 }
 
 type SubmitQuestRequest struct {
-	QuestID    uint 								`json:"quest_id" binding:"required"`
-	Answer 	   interface{}					`json:"answer" binding:"required"`
+	QuestID uint        `json:"quest_id" binding:"required"`
+	Answer  interface{} `json:"answer" binding:"required"`
 }
 
 type AddBadgeRequest struct {
