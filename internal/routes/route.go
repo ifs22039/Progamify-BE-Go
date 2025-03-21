@@ -20,6 +20,7 @@ func SetupRoutes(
 	levelHandler *handler.LevelHandler,
 	avatarHandler *handler.AvatarHandler,
 	badgeHandler *handler.BadgeHandler,
+	giftHandler *handler.GiftHandler,
 ) *gin.Engine {
 	// Initialize Gin router
 	r := gin.Default()
@@ -60,6 +61,9 @@ func SetupRoutes(
 
 		api.GET("/avatars", avatarHandler.GetAll)
 		api.POST("/avatars/buy", avatarHandler.BuyAvatar)
+
+		api.GET("/gifts", giftHandler.GetAll)
+		api.POST("/gifts/buy", giftHandler.BuyGift)
 
 		api.GET("/badge/:id", badgeHandler.GetBadge)
 		api.POST("/badge/add", badgeHandler.AddHaveBadge)
