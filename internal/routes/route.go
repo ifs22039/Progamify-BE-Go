@@ -69,6 +69,7 @@ func SetupRoutes(
 		api.POST("/badge/add", badgeHandler.AddHaveBadge)
 		api.POST("/badge/assign", badgeHandler.AssignBadgeIfEligible)
 		api.GET("/badges", badgeHandler.GetBadges)
+		api.GET("/badges/:userId", badgeHandler.GetBadgesByUserId)
 	}
 
 	return r
