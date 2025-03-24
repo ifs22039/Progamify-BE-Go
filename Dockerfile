@@ -21,6 +21,10 @@ FROM ubuntu:latest
 # Set working directory
 WORKDIR /app
 
+RUN apt update
+RUN apt install nano
+RUN apt install curl
+
 # Menyalin binary dari stage builder
 COPY --from=builder /app/myapp /app/myapp
 COPY --from=builder /app/.env /app/.env
