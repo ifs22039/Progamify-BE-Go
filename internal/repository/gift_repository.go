@@ -10,10 +10,21 @@ import (
 type GiftRepository interface {
 	GetAll() ([]model.Gift, error)
 	BuyGift(userID uint, giftID uint) (*model.HaveGift, error)
+	GetUserGift(userID uint) ([]model.HaveGift, error)
 }
 
 type giftRepository struct {
 	db *gorm.DB
+}
+
+func NewGiftRepository(db *gorm.DB) GiftRepository {
+	return &giftRepository{db}
+}
+
+func (g *giftRepository) GetUserGift(userID uint) ([]model.HaveGift, error) {
+	var gifts []model.HaveGift
+	err := g.db.Preload("User").Preload("Gift").Where("user_id", userID).Find(&gifts).Error
+	return gifts, err
 }
 
 func (g *giftRepository) GetAll() ([]model.Gift, error) {
@@ -54,8 +65,4 @@ func (g *giftRepository) BuyGift(userID uint, giftID uint) (*model.HaveGift, err
 	}
 
 	return &haveGift, nil
-}
-
-func NewGiftRepository(db *gorm.DB) GiftRepository {
-	return &giftRepository{db}
 }

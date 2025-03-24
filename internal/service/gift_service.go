@@ -8,10 +8,15 @@ import (
 type GiftService interface {
 	GetAll() ([]model.Gift, error)
 	BuyGift(userID uint, giftID uint) (*model.HaveGift, error)
+	GetUserGift(userID uint) ([]model.HaveGift, error)
 }
 
 type giftService struct {
 	repo repository.GiftRepository
+}
+
+func (g *giftService) GetUserGift(userID uint) ([]model.HaveGift, error) {
+	return g.repo.GetUserGift(userID)
 }
 
 func (g *giftService) GetAll() ([]model.Gift, error) {

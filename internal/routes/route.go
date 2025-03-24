@@ -65,6 +65,7 @@ func SetupRoutes(
 
 		api.GET("/gifts", giftHandler.GetAll)
 		api.POST("/gifts/buy", giftHandler.BuyGift)
+		api.GET("/gifts/user", giftHandler.GetUserGift)
 
 		api.GET("/badge/:id", badgeHandler.GetBadge)
 		api.POST("/badge/add", badgeHandler.AddHaveBadge)
