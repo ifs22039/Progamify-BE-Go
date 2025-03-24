@@ -203,7 +203,7 @@ func (r *achievementRepository) AssignAchievementIfEligible(userId uint) ([]mode
 	}
 
 	if len(totalTakesPerDay) >= 30 {
-    _ = addAchievementIfNotOwned(4)
+    _ = addAchievementIfNotOwned(2)
 	}
 
 
