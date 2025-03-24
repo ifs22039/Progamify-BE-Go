@@ -132,14 +132,14 @@ func (r *achievementRepository) AssignAchievementIfEligible(userId uint) ([]mode
 
 	var haveBadges []model.HaveBadge
 	err := r.db.
-    Table("have_badges").
-    Select("*").
-    Where("user_id = ?", userId).
-    Group("badge_id").
-    Order("MIN(created_at) ASC").
-    Find(&haveBadges).Error
+			Table("have_badges").
+			Select("badge_id, MIN(created_at) as created_at").
+			Where("user_id = ?", userId).
+			Group("badge_id").
+			Order("created_at ASC").
+			Find(&haveBadges).Error
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch take badges: %w", err)
+			return nil, fmt.Errorf("failed to fetch take badges: %w", err)
 	}
 
 	log.Printf("Successfully fetched %d badges for user_id: %d", len(haveBadges), userId)
@@ -176,27 +176,28 @@ func (r *achievementRepository) AssignAchievementIfEligible(userId uint) ([]mode
 	var totalTakesPerDay []TotalTakesPerDay;
 
 	queryCase2 := `
-    SELECT 
-    take_date,
-    COUNT(DISTINCT take_lessons.id) AS total_lessons,
-    COUNT(DISTINCT take_exercises.id) AS total_exercises,
-    COUNT(DISTINCT take_quests.id) AS total_quests
-		FROM (
-				-- Ambil tanggal unik dari setiap tabel
-				SELECT DISTINCT DATE(created_at) AS take_date FROM take_lessons WHERE user_id = ?
-				UNION
-				SELECT DISTINCT DATE(created_at) FROM take_exercises WHERE user_id = ?
-				UNION
-				SELECT DISTINCT DATE(created_at) FROM take_quests WHERE user_id = ?
-		) AS unique_dates
-		LEFT JOIN take_lessons ON DATE(take_lessons.created_at) = unique_dates.take_date AND take_lessons.user_id = 1
-		LEFT JOIN take_exercises ON DATE(take_exercises.created_at) = unique_dates.take_date AND take_exercises.user_id = 1
-		LEFT JOIN take_quests ON DATE(take_quests.created_at) = unique_dates.take_date AND take_quests.user_id = 1
-		GROUP BY take_date
-		ORDER BY take_date ASC;
-    `
+		WITH unique_dates AS (
+			SELECT DISTINCT DATE(created_at) AS take_date FROM take_lessons WHERE user_id = ?
+			UNION ALL
+			SELECT DISTINCT DATE(created_at) FROM take_exercises WHERE user_id = ?
+			UNION ALL
+			SELECT DISTINCT DATE(created_at) FROM take_quests WHERE user_id = ?
+	)
+	SELECT 
+			u.take_date,
+			COUNT(DISTINCT tl.id) AS total_lessons,
+			COUNT(DISTINCT te.id) AS total_exercises,
+			COUNT(DISTINCT tq.id) AS total_quests
+	FROM unique_dates u
+	LEFT JOIN take_lessons tl ON DATE(tl.created_at) = u.take_date AND tl.user_id = ?
+	LEFT JOIN take_exercises te ON DATE(te.created_at) = u.take_date AND te.user_id = ?
+	LEFT JOIN take_quests tq ON DATE(tq.created_at) = u.take_date AND tq.user_id = ?
+	GROUP BY u.take_date
+	ORDER BY u.take_date ASC;
 
-	err = r.db.Raw(queryCase2, userId, userId, userId).Scan(&totalTakesPerDay).Error
+	`
+
+	err = r.db.Raw(queryCase2, userId, userId, userId, userId, userId, userId).Scan(&totalTakesPerDay).Error
 
 	if err != nil {
 		return nil, err
@@ -222,19 +223,20 @@ func (r *achievementRepository) AssignAchievementIfEligible(userId uint) ([]mode
 	var totalExercisesLessonsCompleted TotalExercisesLessonsCompleted;
 
 	queryCase4 := `
-    SELECT 
-        topics.id, 
-        topics.name, 
-        COUNT(DISTINCT lessons.id) AS total_lessons,
-        COUNT(DISTINCT take_lessons.id) AS total_take_lessons,
-        COUNT(DISTINCT exercises.id) AS total_exercises,
-        COUNT(DISTINCT take_exercises.id) AS total_take_exercises
-    FROM topics
+				SELECT 
+				topics.id, 
+				topics.name, 
+				COUNT(DISTINCT lessons.id) AS total_lessons,
+				COUNT(DISTINCT take_lessons.id) AS total_take_lessons,
+				COUNT(DISTINCT exercises.id) AS total_exercises,
+				COUNT(DISTINCT take_exercises.id) AS total_take_exercises
+		FROM topics
 		LEFT JOIN lessons ON topics.id = lessons.topic_id
 		LEFT JOIN take_lessons ON topics.id = take_lessons.topic_id AND take_lessons.user_id = ?
 		LEFT JOIN exercises ON topics.id = exercises.topic_id
 		LEFT JOIN take_exercises ON topics.id = take_exercises.topic_id AND take_exercises.user_id = ?
-    GROUP BY topics.id, topics.name
+		GROUP BY topics.id, topics.name
+		ORDER BY topics.id ASC;
     `
 
 	err = r.db.Raw(queryCase4, userId, userId).Scan(&totalExercisesLessonsCompleted).Error
