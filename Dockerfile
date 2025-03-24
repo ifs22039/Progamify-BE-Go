@@ -23,7 +23,7 @@ WORKDIR /app
 
 RUN apt update
 RUN apt install nano
-RUN apt install curl
+RUN apt install curl -y
 
 # Menyalin binary dari stage builder
 COPY --from=builder /app/myapp /app/myapp
