@@ -36,3 +36,7 @@ type SubmitQuestRequest struct {
 type AddBadgeRequest struct {
 	BadgeID uint `json:"badge_id" binding:"required"`
 }
+
+type AddAchievementRequest struct {
+	AchievementID uint `json:"achievement_id" binding:"required"`
+}

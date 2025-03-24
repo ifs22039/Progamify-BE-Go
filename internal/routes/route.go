@@ -21,6 +21,7 @@ func SetupRoutes(
 	avatarHandler *handler.AvatarHandler,
 	badgeHandler *handler.BadgeHandler,
 	giftHandler *handler.GiftHandler,
+	achievementHandler *handler.AchievementHandler,
 ) *gin.Engine {
 	// Initialize Gin router
 	r := gin.Default()
@@ -70,6 +71,12 @@ func SetupRoutes(
 		api.POST("/badge/assign", badgeHandler.AssignBadgeIfEligible)
 		api.GET("/badges", badgeHandler.GetBadges)
 		api.GET("/badges/:userId", badgeHandler.GetBadgesByUserId)
+
+		api.GET("/achievement/:id", achievementHandler.GetAchievement)
+		api.POST("/achievement/add", achievementHandler.AddHaveAchievement)
+		api.POST("/achievement/assign", achievementHandler.AssignAchievementIfEligible)
+		api.GET("/achievements", achievementHandler.GetAchievements)
+		api.GET("/achievements/:userId", achievementHandler.GetAchievementsByUserId)
 	}
 
 	return r
