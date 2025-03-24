@@ -9,4 +9,5 @@ type Discussion struct {
 	Title    string      `json:"title" gorm:"not null"`
 	Content  string      `json:"content" gorm:"not null"`
 	Replies  []DiscReply `json:"replies,omitempty" gorm:"foreignKey:DiscussionID"`
+	User     User        `gorm:"foreignKey:UserID" json:"user"`
 }

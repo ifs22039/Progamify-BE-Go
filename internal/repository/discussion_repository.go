@@ -6,7 +6,7 @@ import (
 )
 
 type DiscussionRepository interface {
-	FindDiscussionByLessonID(lessonID uint) ([]map[string]interface{}, error)
+	FindDiscussionByLessonID(lessonID uint) ([]model.Discussion, error)
 	Create(discussion *model.Discussion) error
 	FindById(discussionID uint) (*model.Discussion, error)
 	AddReply(reply *model.DiscReply) error
@@ -26,7 +26,7 @@ func (r *discussionRepository) AddReply(reply *model.DiscReply) error {
 
 func (r *discussionRepository) FindById(discussionID uint) (*model.Discussion, error) {
 	var discussion model.Discussion
-	err := r.db.Preload("Replies.DetailUser").First(&discussion, discussionID).Error
+	err := r.db.Preload("Replies.DetailUser.Avatar").First(&discussion, discussionID).Error
 
 	if err != nil {
 		// Return the error early if the record is not found
@@ -36,30 +36,10 @@ func (r *discussionRepository) FindById(discussionID uint) (*model.Discussion, e
 	return &discussion, nil
 }
 
-func (r *discussionRepository) FindDiscussionByLessonID(lessonID uint) ([]map[string]interface{}, error) {
-	var discussions []map[string]interface{}
-
-	// Fetch discussions with necessary fields
-	if err := r.db.Table("discussions").
-		Select("users.name, DATE_FORMAT(discussions.created_at, '%d/%m/%y %H:%i') as date, discussions.title, discussions.content, discussions.id").
-		Joins("JOIN users ON users.id = discussions.user_id").
-		Where("lesson_id = ?", lessonID).
-		Order("date DESC, id DESC").
-		Find(&discussions).Error; err != nil {
-		return nil, err
-	}
-
-	for i, discussion := range discussions {
-		var replyCount int64
-		if err := r.db.Table("disc_replies").
-			Where("discussion_id = ?", discussion["id"]).
-			Count(&replyCount).Error; err != nil {
-			return nil, err
-		}
-		discussions[i]["replies"] = replyCount
-	}
-
-	return discussions, nil
+func (r *discussionRepository) FindDiscussionByLessonID(lessonID uint) ([]model.Discussion, error) {
+	var discussions []model.Discussion
+	err := r.db.Preload("User.Avatar").Where("lesson_id", lessonID).Find(&discussions).Error
+	return discussions, err
 }
 
 func (r *discussionRepository) Create(discussion *model.Discussion) error {

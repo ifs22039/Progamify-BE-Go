@@ -6,7 +6,7 @@ import (
 )
 
 type DiscussionService interface {
-	GetDiscussionsByLessonID(lessonID uint) ([]map[string]interface{}, error)
+	GetDiscussionsByLessonID(lessonID uint) ([]model.Discussion, error)
 	CreateDiscussion(discussion *model.Discussion) error
 	GetById(discussionID uint) (*model.Discussion, error)
 	AddReply(reply *model.DiscReply) error
@@ -28,7 +28,7 @@ func (s *discussionService) GetById(discussionID uint) (*model.Discussion, error
 	return s.repo.FindById(discussionID)
 }
 
-func (s *discussionService) GetDiscussionsByLessonID(lessonID uint) ([]map[string]interface{}, error) {
+func (s *discussionService) GetDiscussionsByLessonID(lessonID uint) ([]model.Discussion, error) {
 	return s.repo.FindDiscussionByLessonID(lessonID)
 }
 
