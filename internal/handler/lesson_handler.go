@@ -9,10 +9,11 @@ import (
 
 type LessonHandler struct {
 	lessonService service.LessonService
+	achievementService service.AchievementService
 }
 
-func NewLessonHandler(lessonService service.LessonService) *LessonHandler {
-	return &LessonHandler{lessonService}
+func NewLessonHandler(lessonService service.LessonService, achievementService service.AchievementService) *LessonHandler {
+	return &LessonHandler{lessonService, achievementService}
 }
 
 func (h *LessonHandler) GetLesson(c *gin.Context) {
@@ -47,6 +48,13 @@ func (h *LessonHandler) GetLesson(c *gin.Context) {
 			"content":    lesson.Content,
 			"exp":        lesson.Exp,
 			"takeLesson": takeLesson,
+		}
+
+		achievements, err := h.achievementService.CheckAndAssignAchievement(userID)
+		if err != nil {
+		}
+		if len(achievements) > 0 {
+			mergedLesson["achievement"] = achievements
 		}
 
 		c.JSON(http.StatusOK, mergedLesson)
