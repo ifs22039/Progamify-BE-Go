@@ -3,17 +3,19 @@ package handler
 import (
 	"boysitorus/Progamify-Restful-API/internal/model"
 	"boysitorus/Progamify-Restful-API/internal/service"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ExerciseHandler struct {
 	exerciseService service.ExerciseService
+	achievementService service.AchievementService
 }
 
-func NewExerciseHandler(exerciseService service.ExerciseService) *ExerciseHandler {
-	return &ExerciseHandler{exerciseService}
+func NewExerciseHandler(exerciseService service.ExerciseService, achievementService service.AchievementService) *ExerciseHandler {
+	return &ExerciseHandler{exerciseService, achievementService}
 }
 
 func (h *ExerciseHandler) GetExercise(c *gin.Context) {
@@ -48,6 +50,30 @@ func (h *ExerciseHandler) SubmitExercise(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to submit exercise"})
 		return
 	}
-	// Return response ke client
-	c.JSON(http.StatusOK, takeExercise)
+
+	mergedExercise := map[string]interface{}{
+		"ID":         	takeExercise.ID,
+		"CreatedAt":  	takeExercise.CreatedAt,
+		"UpdatedAt":  	takeExercise.UpdatedAt,
+		"DeletedAt":  	takeExercise.DeletedAt,
+		"LessonID":     takeExercise.LessonID,
+		"TopicID":    	takeExercise.TopicID,
+		"Answers":      takeExercise.Answers,
+		"Score": 				takeExercise.Score,
+		"TotalCorrect": takeExercise.TotalCorrect,
+		"TotalQuestion":takeExercise.TotalQuestion,
+		"TotalExp": 		takeExercise.TotalExp,
+		"TotalPoint":   takeExercise.TotalPoint,
+		"RewardExp": 		takeExercise.RewardExp,
+		"RewardPoint": 	takeExercise.RewardPoint,
+	}
+
+	achievements, err := h.achievementService.CheckAndAssignAchievement(userId)
+	if err != nil {
+	}
+	if len(achievements) > 0 {
+		mergedExercise["achievement"] = achievements
+	}
+	
+	c.JSON(http.StatusOK, mergedExercise)
 }
