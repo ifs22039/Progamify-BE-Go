@@ -202,8 +202,14 @@ func (r *achievementRepository) AssignAchievementIfEligible(userId uint) ([]mode
 		return nil, err
 	}
 
+	// Logging jumlah hari unik
+	log.Printf("📅 Total hari unik belajar: %d", len(totalTakesPerDay))
+
 	if len(totalTakesPerDay) >= 30 {
+		log.Println("🏆 Achievement Unlocked: Ambitious Learner (Belajar selama 30 hari)")
     _ = addAchievementIfNotOwned(2)
+	} else {
+		log.Printf("🔜 Progress: Baru belajar selama %d hari, butuh %d hari lagi untuk achievement.", len(totalTakesPerDay), 30-len(totalTakesPerDay))
 	}
 
 
