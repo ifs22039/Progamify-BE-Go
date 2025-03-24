@@ -38,7 +38,7 @@ func (r *discussionRepository) FindById(discussionID uint) (*model.Discussion, e
 
 func (r *discussionRepository) FindDiscussionByLessonID(lessonID uint) ([]model.Discussion, error) {
 	var discussions []model.Discussion
-	err := r.db.Preload("User.Avatar").Where("lesson_id", lessonID).Find(&discussions).Error
+	err := r.db.Preload("User.Avatar").Preload("Replies").Where("lesson_id", lessonID).Find(&discussions).Error
 	return discussions, err
 }
 
