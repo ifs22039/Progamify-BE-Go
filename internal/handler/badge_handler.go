@@ -81,3 +81,20 @@ func (h *BadgeHandler) GetBadges(c *gin.Context) {
 
 	c.JSON(http.StatusOK, badge)
 }
+
+
+func (h *BadgeHandler) GetBadgesByUserId(c *gin.Context) {
+	userId, err := strconv.ParseUint(c.Param("userId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	badges, err := h.badgeService.GetBadges(uint(userId))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Badges not found for this user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, badges)
+}

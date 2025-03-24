@@ -130,7 +130,7 @@ func (r *badgeRepository) AssignBadgeIfEligible(userId uint) ([]model.HaveBadge,
 		var countQuestBeginner int64
 		r.db.Model(&model.HaveBadge{}).Where("user_id = ? AND badge_id = ?", userId, 1).Count(&countQuestBeginner)
 
-		if countQuestBeginner == 0 { // ✅ Cek apakah user sudah punya badge ini
+		if badgeID == 1 && countQuestBeginner == 0 { // ✅ Cek apakah user sudah punya badge ini
 			log.Printf("User %d belum memiliki badge %d, menambahkan badge...", userId, badgeID)
 			badge, err := r.AddHaveBadge(userId, badgeID)
 			if err != nil {
