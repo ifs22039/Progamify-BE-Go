@@ -26,7 +26,7 @@ func (r *discussionRepository) AddReply(reply *model.DiscReply) error {
 
 func (r *discussionRepository) FindById(discussionID uint) (*model.Discussion, error) {
 	var discussion model.Discussion
-	err := r.db.Preload("Replies.DetailUser.Avatar").First(&discussion, discussionID).Error
+	err := r.db.Preload("User.Avatar").Preload("Replies.DetailUser.Avatar").First(&discussion, discussionID).Error
 
 	if err != nil {
 		// Return the error early if the record is not found
@@ -38,7 +38,7 @@ func (r *discussionRepository) FindById(discussionID uint) (*model.Discussion, e
 
 func (r *discussionRepository) FindDiscussionByLessonID(lessonID uint) ([]model.Discussion, error) {
 	var discussions []model.Discussion
-	err := r.db.Preload("User.Avatar").Where("lesson_id", lessonID).Find(&discussions).Error
+	err := r.db.Preload("User.Avatar").Preload("Replies").Where("lesson_id", lessonID).Find(&discussions).Error
 	return discussions, err
 }
 

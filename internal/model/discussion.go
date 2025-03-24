@@ -8,6 +8,6 @@ type Discussion struct {
 	UserID   uint        `json:"user_id" gorm:"size:255;not null"`
 	Title    string      `json:"title" gorm:"not null"`
 	Content  string      `json:"content" gorm:"not null"`
-	Replies  []DiscReply `json:"replies,omitempty" gorm:"foreignKey:DiscussionID"`
+	Replies  []DiscReply `json:"replies,_" gorm:"foreignKey:DiscussionID"`
 	User     User        `gorm:"foreignKey:UserID" json:"user"`
 }

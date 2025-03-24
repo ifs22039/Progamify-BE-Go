@@ -86,6 +86,16 @@ func (r *userRepository) Update(user *model.User) error {
 func (r *userRepository) Create(user *model.User) error {
 	err := r.db.Create(user).Error
 
+	haveAvatar := model.HaveAvatar{
+		UserID:   user.ID,
+		AvatarID: 1,
+	}
+
+	err = r.db.Create(&haveAvatar).Error
+	if err != nil {
+		return err
+	}
+
 	return err
 }
 
