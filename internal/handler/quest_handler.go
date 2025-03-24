@@ -12,10 +12,11 @@ import (
 type QuestHandler struct {
 	questService service.QuestService
 	badgeService service.BadgeService
+	achievementService service.AchievementService
 }
 
-func NewQuestHandler(questService service.QuestService, badgeService service.BadgeService) *QuestHandler {
-	return &QuestHandler{questService, badgeService}
+func NewQuestHandler(questService service.QuestService, badgeService service.BadgeService, achievementService service.AchievementService) *QuestHandler {
+	return &QuestHandler{questService, badgeService, achievementService}
 }
 
 func (h *QuestHandler) GetQuest(c *gin.Context) {
@@ -55,12 +56,20 @@ func (h *QuestHandler) SubmitQuest(c *gin.Context) {
 	if err != nil {
 	}
 
+	achievements, err := h.achievementService.CheckAndAssignAchievement(userId)
+	if err != nil {
+	}
+
 	response := gin.H{
 		"quest": takeQuest,
 	}
 
 	if len(badges) > 0 {
 		response["badge"] = badges
+	}
+
+	if len(achievements) > 0 {
+		response["achievement"] = achievements
 	}
 	// Return response ke client
 	c.JSON(http.StatusOK, response)

@@ -52,7 +52,7 @@ func main() {
 	lessonHandler := handler.NewLessonHandler(lessonService)
 	exerciseHandler := handler.NewExerciseHandler(exerciseService)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardService)
-	questHandler := handler.NewQuestHandler(questService, badgeService)
+	questHandler := handler.NewQuestHandler(questService, badgeService, achievementService)
 	discussionHandler := handler.NewDiscussionHandler(discussionService)
 	levelHandler := handler.NewLevelHandler(levelService)
 	avatarHandler := handler.NewAvatarHandler(avatarService)
