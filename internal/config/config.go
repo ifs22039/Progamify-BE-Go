@@ -12,6 +12,7 @@ type Config struct {
 	DBName            string `mapstructure:"DB_NAME"`
 	JWTSecret         string `mapstructure:"JWT_SECRET"`
 	HuggingfaceApiKey string `mapstructure:"HUGGINGFACE_API_KEY"`
+	GradingApiUrl     string `mapstructure:"GRADING_API_URL"`
 }
 
 func LoadConfig() *Config {

@@ -43,3 +43,13 @@ func (h *GiftHandler) BuyGift(c *gin.Context) {
 
 	c.JSON(http.StatusOK, haveAvatar)
 }
+
+func (h *GiftHandler) GetUserGift(c *gin.Context) {
+	userID := c.MustGet("userId").(uint)
+	userGifts, err := h.service.GetUserGift(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, userGifts)
+}

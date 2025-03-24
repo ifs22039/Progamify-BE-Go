@@ -7,4 +7,7 @@ type HaveGift struct {
 	UserID   uint `json:"user_id"`
 	GiftID   uint `json:"gift_id"`
 	IsActive bool `json:"is_active"`
+
+	User User `gorm:"foreignKey:UserID" json:"user"`
+	Gift Gift `gorm:"foreignKey:GiftID" json:"gift"`
 }
