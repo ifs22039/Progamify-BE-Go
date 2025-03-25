@@ -13,6 +13,12 @@ type UpdateUserRequest struct {
 	TotalPoint int    `json:"total_point"`
 }
 
+type UpdatePasswordRequest struct {
+	Password             string `json:"password" binding:"required,min=8"`
+	NewPassword          string `json:"new_password" binding:"required,min=8"`
+	PasswordConfirmation string `json:"new_password_confirmation" binding:"required,min=8,eqfield=NewPassword"`
+}
+
 type RegisterRequest struct {
 	Name                 string `json:"name" binding:"required"`
 	Email                string `json:"email" binding:"required,email"`
@@ -20,7 +26,7 @@ type RegisterRequest struct {
 	Angkatan             int    `json:"angkatan" binding:"required"`
 	Password             string `json:"password" binding:"required,min=8"`
 	PasswordConfirmation string `json:"password_confirmation" binding:"required,eqfield=Password"`
-	AvatarID             uint    `json:"avatar_id" binding:"required"`
+	AvatarID             uint   `json:"avatar_id" binding:"required"`
 }
 
 type SubmitExerciseRequest struct {

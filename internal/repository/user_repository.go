@@ -2,7 +2,9 @@ package repository
 
 import (
 	"boysitorus/Progamify-Restful-API/internal/model"
+	"boysitorus/Progamify-Restful-API/pkg/utils"
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
 )
 
@@ -18,6 +20,7 @@ type UserRepository interface {
 	CheckLevel(userID uint) error
 	LessonTaken(userID uint) (int, error)
 	ChangeAvatar(userID uint, avatarID uint) (*model.User, error)
+	UpdatePassword(id uint, req *model.UpdatePasswordRequest) (*model.User, error)
 }
 
 type userRepository struct {
@@ -171,6 +174,31 @@ func (r *userRepository) ChangeAvatar(userID uint, avatarID uint) (*model.User, 
 	}
 
 	err = r.db.Model(&user).Update("avatar_id", avatarID).Error
+	if err != nil {
+		return &model.User{}, err
+	}
+
+	return &user, nil
+}
+
+func (r *userRepository) UpdatePassword(id uint, req *model.UpdatePasswordRequest) (*model.User, error) {
+	var user model.User
+
+	err := r.db.First(&user, id).Error
+	if err != nil {
+		return &model.User{}, err
+	}
+
+	if !utils.CheckPassword(req.Password, user.Password) {
+		return nil, fmt.Errorf("invalid current password")
+	}
+
+	hashedPassword, err := utils.HashPassword(req.NewPassword)
+	if err != nil {
+		return nil, fmt.Errorf("error hashing new password: %v", err)
+	}
+
+	err = r.db.Model(&user).Update("password", hashedPassword).Error
 	if err != nil {
 		return &model.User{}, err
 	}

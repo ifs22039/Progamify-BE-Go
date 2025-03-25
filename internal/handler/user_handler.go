@@ -73,6 +73,24 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+func (h *UserHandler) UpdatePassword(c *gin.Context) {
+	userId := c.MustGet("userId").(uint)
+
+	var req model.UpdatePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := h.userService.UpdatePassword(userId, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
 func (h *UserHandler) ChangeAvatar(c *gin.Context) {
 	userID := c.MustGet("userId").(uint)
 
@@ -86,7 +104,7 @@ func (h *UserHandler) ChangeAvatar(c *gin.Context) {
 	}
 
 	// Call the repository function to change avatar
-	user, err := h.userService.ChangeAvatar(uint(userID), request.AvatarID)
+	user, err := h.userService.ChangeAvatar(userID, request.AvatarID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
