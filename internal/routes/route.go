@@ -38,7 +38,8 @@ func SetupRoutes(
 		api.PUT("/users/current", userHandler.UpdateUser)
 		api.DELETE("/users/logout", authHandler.Logout)
 		api.POST("/users/avatar", userHandler.ChangeAvatar)
-		api.POST("users/password", userHandler.UpdatePassword)
+		api.POST("/users/password", userHandler.UpdatePassword)
+		api.GET("/users/totalLesson/:userId", userHandler.GetUserLessonTaken)
 
 		api.GET("/topics", topicHandler.ListTopics)
 		api.GET("/topics/:id", topicHandler.GetTopic)

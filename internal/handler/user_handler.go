@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"net/http"
+	"strconv"
 )
 
 type UserHandler struct {
@@ -24,6 +25,12 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 	user, err := h.userService.GetUser(userId)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	err = h.userService.UpdateLastLogin(userId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "failed to update last login"})
 		return
 	}
 
@@ -116,4 +123,20 @@ func (h *UserHandler) ChangeAvatar(c *gin.Context) {
 
 	// Respond with updated user
 	c.JSON(http.StatusOK, user)
+}
+
+func (h *UserHandler) GetUserLessonTaken(c *gin.Context) {
+	userID, err := strconv.ParseUint(c.Param("userId"), 10, 64)
+
+	lessonTaken, err := h.userService.GetLessonTaken(uint(userID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "error finding lesson taken for user"})
+		return
+	}
+
+	response := map[string]int{
+		"total_lesson_taken": lessonTaken,
+	}
+
+	c.JSON(http.StatusOK, response)
 }

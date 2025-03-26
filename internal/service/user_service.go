@@ -11,6 +11,7 @@ type UserService interface {
 	GetLessonTaken(userID uint) (int, error)
 	ChangeAvatar(userID uint, avatarID uint) (*model.User, error)
 	UpdatePassword(id uint, req *model.UpdatePasswordRequest) (*model.User, error)
+	UpdateLastLogin(id uint) error
 }
 
 type userService struct {
@@ -59,4 +60,8 @@ func (s *userService) UpdateUser(id uint, req *model.UpdateUserRequest) (*model.
 
 func (s *userService) UpdatePassword(id uint, req *model.UpdatePasswordRequest) (*model.User, error) {
 	return s.userRepo.UpdatePassword(id, req)
+}
+
+func (s *userService) UpdateLastLogin(id uint) error {
+	return s.userRepo.UpdateLastLogin(id)
 }

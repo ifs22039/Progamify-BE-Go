@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"gorm.io/gorm"
+	"time"
 )
 
 type UserRepository interface {
@@ -21,6 +22,7 @@ type UserRepository interface {
 	LessonTaken(userID uint) (int, error)
 	ChangeAvatar(userID uint, avatarID uint) (*model.User, error)
 	UpdatePassword(id uint, req *model.UpdatePasswordRequest) (*model.User, error)
+	UpdateLastLogin(id uint) error
 }
 
 type userRepository struct {
@@ -204,4 +206,20 @@ func (r *userRepository) UpdatePassword(id uint, req *model.UpdatePasswordReques
 	}
 
 	return &user, nil
+}
+
+func (r *userRepository) UpdateLastLogin(id uint) error {
+	var user model.User
+
+	err := r.db.First(&user, id).Error
+	if err != nil {
+		return err
+	}
+
+	err = r.db.Model(&user).Update("last_login", time.Now()).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
