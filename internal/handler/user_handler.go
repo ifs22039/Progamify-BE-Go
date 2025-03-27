@@ -65,19 +65,24 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	userId := c.MustGet("userId").(uint)
 
-	var req model.UpdateUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var request struct {
+		Name     string `json:"name" binding:"required,min=8"`                         // Nama minimal 8 karakter
+		Nim      string `json:"nim" binding:"required"`                                // Nim wajib diisi
+		Angkatan int    `json:"angkatan" binding:"required,numeric,min=1000,max=9999"` // Angkatan harus 4 digit
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	user, err := h.userService.UpdateUser(userId, &req)
+	user, err := h.userService.UpdateUser(userId, request.Name, request.Nim, request.Angkatan)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully", "user": user})
 }
 
 func (h *UserHandler) UpdatePassword(c *gin.Context) {

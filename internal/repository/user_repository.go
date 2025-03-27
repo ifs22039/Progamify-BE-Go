@@ -23,6 +23,7 @@ type UserRepository interface {
 	ChangeAvatar(userID uint, avatarID uint) (*model.User, error)
 	UpdatePassword(id uint, req *model.UpdatePasswordRequest) (*model.User, error)
 	UpdateLastLogin(id uint) error
+	UpdateUser(user *model.User) error
 }
 
 type userRepository struct {
@@ -86,6 +87,10 @@ func (r *userRepository) FindById(id uint) (*model.User, error) {
 
 func (r *userRepository) Update(user *model.User) error {
 	return r.db.Save(user).Error
+}
+
+func (r *userRepository) UpdateUser(user *model.User) error {
+	return r.db.Model(user).Select("Name", "Nim", "Angkatan").Updates(user).Error
 }
 
 func (r *userRepository) Create(user *model.User) error {
