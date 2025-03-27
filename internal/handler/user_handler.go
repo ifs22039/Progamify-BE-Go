@@ -66,7 +66,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	userId := c.MustGet("userId").(uint)
 
 	var request struct {
-		Name     string `json:"name" binding:"required,min=8"`                         // Nama minimal 8 karakter
+		Name     string `json:"name" binding:"required"`                               // Nama minimal 8 karakter
 		Nim      string `json:"nim" binding:"required"`                                // Nim wajib diisi
 		Angkatan int    `json:"angkatan" binding:"required,numeric,min=1000,max=9999"` // Angkatan harus 4 digit
 	}
