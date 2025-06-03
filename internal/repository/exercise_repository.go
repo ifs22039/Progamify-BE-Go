@@ -4,6 +4,7 @@ import (
 	"boysitorus/Progamify-Restful-API/internal/model"
 	"boysitorus/Progamify-Restful-API/pkg/utils"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"gorm.io/gorm"
 	"strings"
@@ -24,17 +25,17 @@ func NewExerciseRepository(db *gorm.DB, userRepo UserRepository) ExerciseReposit
 }
 
 func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitExerciseRequest) (*model.TakeExercise, error) {
-	//var takeExercise model.TakeExercise
-	//
-	//err := e.db.Where("user_id = ? AND exercise_id = ?", userID, request.ExerciseID).First(&takeExercise).Error
-	//
-	//if err == nil {
-	//	return &takeExercise, errors.New("This user already take the exercise")
-	//}
+	var takeExercise model.TakeExercise
+
+	err := e.db.Where("user_id = ? AND exercise_id = ?", userID, request.ExerciseID).First(&takeExercise).Error
+
+	if err == nil {
+		return &takeExercise, errors.New("this user already take the exercise")
+	}
 
 	var exercise model.Exercise
 
-	err := e.db.Preload("Questions.Answers").First(&exercise, request.ExerciseID).Error
+	err = e.db.Preload("Questions.Answers").First(&exercise, request.ExerciseID).Error
 
 	if err != nil {
 		return nil, err
