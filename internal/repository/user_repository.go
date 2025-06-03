@@ -155,48 +155,48 @@ func (r *userRepository) AddPoint(userID uint, point int) error {
 }
 
 func (r *userRepository) GetTopUsersByExp(limit int, userId uint) ([]model.UserWithRank, error) {
-	var topUsers []model.User
-	var result []model.UserWithRank
+    var allUsers []model.User
+    var result []model.UserWithRank
 
-	err := r.db.Order("total_exp DESC").Limit(limit).Preload("Avatar").Find(&topUsers).Error
-	if err != nil {
-		return nil, err
-	}
+    // Step 1: Urutkan semua user berdasarkan total_exp DESC
+    err := r.db.Order("total_exp DESC, id ASC").Preload("Avatar").Find(&allUsers).Error
+    if err != nil {
+        return nil, err
+    }
 
-	var rank int64
-	err = r.db.Model(&model.User{}).
-		Where("total_exp > (?)", r.db.Model(&model.User{}).Select("total_exp").Where("id = ?", userId)).
-		Count(&rank).Error
-	if err != nil {
-		return nil, err
-	}
-	rank++
+    var userInTop bool = false
+    var userWithRank model.UserWithRank
 
-	userIncluded := false
-	for i, user := range topUsers {
-		result = append(result, model.UserWithRank{
-			User: user,
-			Rank: i + 1,
-		})
-		if user.ID == userId {
-			userIncluded = true
-		}
-	}
+    // Step 2: Bangun top N users dan temukan userId rank-nya
+    for i, user := range allUsers {
+        rank := i + 1
+        if rank <= limit {
+            // Masukkan ke dalam top N
+            result = append(result, model.UserWithRank{
+                User: user,
+                Rank: rank,
+            })
+            if user.ID == userId {
+                userInTop = true
+            }
+        }
+        if user.ID == userId {
+            // Simpan userId jika belum ada di top N
+            userWithRank = model.UserWithRank{
+                User: user,
+                Rank: rank,
+            }
+        }
+    }
 
-	if !userIncluded {
-		var currentUser model.User
-		err = r.db.Where("id = ?", userId).Preload("Avatar").First(&currentUser).Error
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, model.UserWithRank{
-			User: currentUser,
-			Rank: int(rank),
-		})
-	}
+    // Step 3: Jika userId tidak ada di top N, tambahkan dia (dengan rank asli)
+    if !userInTop {
+        result = append(result, userWithRank)
+    }
 
-	return result, nil
+    return result, nil
 }
+
 
 func (r *userRepository) ChangeAvatar(userID uint, avatarID uint) (*model.User, error) {
 	var user model.User

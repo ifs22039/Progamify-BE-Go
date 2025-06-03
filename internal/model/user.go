@@ -17,6 +17,6 @@ type User struct {
 }
 
 type UserWithRank struct {
-	Rank int
-	User User
+	Rank 			int     `json:"rank" gorm:"not null"`
+	User 			User		`json:"user"`
 }
