@@ -5,8 +5,9 @@ import (
 	"boysitorus/Progamify-Restful-API/pkg/utils"
 	"errors"
 	"fmt"
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type UserRepository interface {
@@ -15,7 +16,7 @@ type UserRepository interface {
 	Update(user *model.User) error
 	Create(user *model.User) error
 	ExistsByEmail(email string) (bool, error)
-	GetTopUsersByExp(limit int) ([]model.User, error)
+	GetTopUsersByExp(limit int, userId uint) ([]model.UserWithRank, error)
 	AddPoint(userID uint, point int) error
 	AddExp(userID uint, exp int) error
 	CheckLevel(userID uint) error
@@ -153,11 +154,49 @@ func (r *userRepository) AddPoint(userID uint, point int) error {
 	return nil
 }
 
-func (r *userRepository) GetTopUsersByExp(limit int) ([]model.User, error) {
-	var users []model.User
-	err := r.db.Order("total_exp DESC").Limit(limit).Preload("Avatar").Find(&users).Error
-	return users, err
+func (r *userRepository) GetTopUsersByExp(limit int, userId uint) ([]model.UserWithRank, error) {
+    var allUsers []model.User
+    var result []model.UserWithRank
+
+    // Step 1: Urutkan semua user berdasarkan total_exp DESC
+    err := r.db.Order("total_exp DESC, id ASC").Preload("Avatar").Find(&allUsers).Error
+    if err != nil {
+        return nil, err
+    }
+
+    var userInTop bool = false
+    var userWithRank model.UserWithRank
+
+    // Step 2: Bangun top N users dan temukan userId rank-nya
+    for i, user := range allUsers {
+        rank := i + 1
+        if rank <= limit {
+            // Masukkan ke dalam top N
+            result = append(result, model.UserWithRank{
+                User: user,
+                Rank: rank,
+            })
+            if user.ID == userId {
+                userInTop = true
+            }
+        }
+        if user.ID == userId {
+            // Simpan userId jika belum ada di top N
+            userWithRank = model.UserWithRank{
+                User: user,
+                Rank: rank,
+            }
+        }
+    }
+
+    // Step 3: Jika userId tidak ada di top N, tambahkan dia (dengan rank asli)
+    if !userInTop {
+        result = append(result, userWithRank)
+    }
+
+    return result, nil
 }
+
 
 func (r *userRepository) ChangeAvatar(userID uint, avatarID uint) (*model.User, error) {
 	var user model.User

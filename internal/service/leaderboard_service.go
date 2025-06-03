@@ -6,7 +6,7 @@ import (
 )
 
 type LeaderboardService interface {
-	GetLeaderboard(limit int) ([]model.User, error)
+	GetLeaderboard(limit int, userId uint) ([]model.UserWithRank, error)
 }
 
 type leaderboardService struct {
@@ -17,6 +17,6 @@ func NewLeaderboardService(userRepo repository.UserRepository) LeaderboardServic
 	return &leaderboardService{userRepo}
 }
 
-func (s *leaderboardService) GetLeaderboard(limit int) ([]model.User, error) {
-	return s.userRepo.GetTopUsersByExp(limit)
+func (s *leaderboardService) GetLeaderboard(limit int, userId uint) ([]model.UserWithRank, error) {
+	return s.userRepo.GetTopUsersByExp(limit, userId)
 }

@@ -16,6 +16,7 @@ func NewLeaderboardHandler(leaderboardService service.LeaderboardService) *Leade
 }
 
 func (h *LeaderboardHandler) GetLeaderboard(c *gin.Context) {
+	userId := c.MustGet("userId").(uint)
 	limitStr := c.DefaultQuery("limit", "10")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
@@ -23,7 +24,7 @@ func (h *LeaderboardHandler) GetLeaderboard(c *gin.Context) {
 		return
 	}
 
-	users, err := h.leaderboardService.GetLeaderboard(limit)
+	users, err := h.leaderboardService.GetLeaderboard(limit, userId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch leaderboard"})
 		return
