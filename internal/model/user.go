@@ -15,3 +15,8 @@ type User struct {
 	AvatarID   uint   `json:"avatar_id"`
 	Avatar     Avatar `json:"avatar" gorm:"foreignKey:AvatarID;"`
 }
+
+type UserWithRank struct {
+	Rank int
+	User User
+}

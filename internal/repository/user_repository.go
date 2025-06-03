@@ -5,8 +5,9 @@ import (
 	"boysitorus/Progamify-Restful-API/pkg/utils"
 	"errors"
 	"fmt"
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type UserRepository interface {
@@ -15,7 +16,7 @@ type UserRepository interface {
 	Update(user *model.User) error
 	Create(user *model.User) error
 	ExistsByEmail(email string) (bool, error)
-	GetTopUsersByExp(limit int) ([]model.User, error)
+	GetTopUsersByExp(limit int, userId uint) ([]model.UserWithRank, error)
 	AddPoint(userID uint, point int) error
 	AddExp(userID uint, exp int) error
 	CheckLevel(userID uint) error
@@ -153,10 +154,48 @@ func (r *userRepository) AddPoint(userID uint, point int) error {
 	return nil
 }
 
-func (r *userRepository) GetTopUsersByExp(limit int) ([]model.User, error) {
-	var users []model.User
-	err := r.db.Order("total_exp DESC").Limit(limit).Preload("Avatar").Find(&users).Error
-	return users, err
+func (r *userRepository) GetTopUsersByExp(limit int, userId uint) ([]model.UserWithRank, error) {
+	var topUsers []model.User
+	var result []model.UserWithRank
+
+	err := r.db.Order("total_exp DESC").Limit(limit).Preload("Avatar").Find(&topUsers).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var rank int64
+	err = r.db.Model(&model.User{}).
+		Where("total_exp > (?)", r.db.Model(&model.User{}).Select("total_exp").Where("id = ?", userId)).
+		Count(&rank).Error
+	if err != nil {
+		return nil, err
+	}
+	rank++
+
+	userIncluded := false
+	for i, user := range topUsers {
+		result = append(result, model.UserWithRank{
+			User: user,
+			Rank: i + 1,
+		})
+		if user.ID == userId {
+			userIncluded = true
+		}
+	}
+
+	if !userIncluded {
+		var currentUser model.User
+		err = r.db.Where("id = ?", userId).Preload("Avatar").First(&currentUser).Error
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, model.UserWithRank{
+			User: currentUser,
+			Rank: int(rank),
+		})
+	}
+
+	return result, nil
 }
 
 func (r *userRepository) ChangeAvatar(userID uint, avatarID uint) (*model.User, error) {
