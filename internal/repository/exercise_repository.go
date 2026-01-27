@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gorm.io/gorm"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 type ExerciseRepository interface {
@@ -319,12 +320,18 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 
 func (e *exerciseRepository) FindById(id uint) (*model.Exercise, error) {
 	var exercise model.Exercise
-	err := e.db.Preload("Questions.Answers").First(&exercise, id).Error
+
+	err := e.db.
+		Preload("Questions", func(db *gorm.DB) *gorm.DB {
+			return db.Order("RAND()").Limit(5)
+		}).
+		Preload("Questions.Answers").
+		First(&exercise, id).Error
 
 	if err != nil {
-		// Return the error early if the record is not found
 		return nil, err
 	}
 
-	return &exercise, err
+	return &exercise, nil
 }
+
