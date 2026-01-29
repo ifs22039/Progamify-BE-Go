@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+
 	"gorm.io/gorm"
 )
 
@@ -11,6 +12,7 @@ type TakeExercise struct {
 	LessonID      uint            `json:"lesson_id" gorm:"foreignKey:LessonID"`
 	UserID        uint            `json:"user_id" gorm:"foreignKey:UserID"`
 	TopicID       uint            `json:"topic_id" gorm:"foreignKey:TopicID"`
+	AttemptNumber int             `json:"attempt_number"`
 	Answers       json.RawMessage `json:"answers"`
 	Score         float64         `json:"score"`
 	TotalCorrect  int             `json:"total_correct"`

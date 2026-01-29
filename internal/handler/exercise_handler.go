@@ -60,6 +60,7 @@ func (h *ExerciseHandler) SubmitExercise(c *gin.Context) {
 		"lesson_id":     takeExercise.LessonID,
 		"user_id":			takeExercise.UserID,
 		"topic_id":    	takeExercise.TopicID,
+		"attempt_number": takeExercise.AttemptNumber,
 		"answers":      takeExercise.Answers,
 		"score": 				takeExercise.Score,
 		"total_correct": takeExercise.TotalCorrect,

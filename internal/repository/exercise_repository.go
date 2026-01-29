@@ -4,7 +4,6 @@ import (
 	"boysitorus/Progamify-Restful-API/internal/model"
 	"boysitorus/Progamify-Restful-API/pkg/utils"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -26,17 +25,9 @@ func NewExerciseRepository(db *gorm.DB, userRepo UserRepository) ExerciseReposit
 }
 
 func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitExerciseRequest) (*model.TakeExercise, error) {
-	var takeExercise model.TakeExercise
-
-	err := e.db.Where("user_id = ? AND exercise_id = ?", userID, request.ExerciseID).First(&takeExercise).Error
-
-	if err == nil {
-		return &takeExercise, errors.New("this user already take the exercise")
-	}
-
 	var exercise model.Exercise
 
-	err = e.db.Preload("Questions.Answers").First(&exercise, request.ExerciseID).Error
+	err := e.db.Preload("Questions.Answers").First(&exercise, request.ExerciseID).Error
 
 	if err != nil {
 		return nil, err
@@ -49,6 +40,11 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 	if err != nil {
 		return nil, err
 	}
+
+	// Count previous attempts
+	var attemptCount int64
+	e.db.Model(&model.TakeExercise{}).Where("user_id = ? AND exercise_id = ?", userID, request.ExerciseID).Count(&attemptCount)
+	attemptNumber := int(attemptCount) + 1
 
 	answersJSON := request.Answers
 
@@ -282,6 +278,7 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 		LessonID:      lesson.ID,
 		UserID:        userID,
 		TopicID:       lesson.TopicID,
+		AttemptNumber: attemptNumber,
 		Answers:       answerDetail,
 		Score:         score,
 		TotalQuestion: int(totalQuestions),
