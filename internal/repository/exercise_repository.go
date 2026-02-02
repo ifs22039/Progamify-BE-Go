@@ -105,9 +105,15 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 		} else if question.Type == "true_false" {
 			correctAnswer := question.Answers[0]
 			correctAnswerIndex := 0
-			jawabanUser := detail["answer_text"].(string)
+			var jawabanUser string
+			
+			if val, ok := detail["answer_text"].(string); ok {
+				jawabanUser = val
+			} else if val, ok := detail["index_jawaban"].(string); ok {
+				jawabanUser = val
+			}
 
-			if strings.ToLower(correctAnswer.Content) == strings.ToLower(jawabanUser) {
+			if strings.TrimSpace(strings.ToLower(correctAnswer.Content)) == strings.TrimSpace(strings.ToLower(jawabanUser)) {
 				correctAnswerIndex = int(detail["index_jawaban"].(float64))
 				exp = exp + question.Exp
 				point = point + question.Point
@@ -128,7 +134,7 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 				"feedback":             question.Feedback,
 				"exp_gained":           exp,
 				"point_gained":         point,
-				"user_answer":          detail["answer_text"],
+				"user_answer":          jawabanUser,
 				"correct_answer":       correctAnswer.Content,
 				"user_answer_index":    detail["index_jawaban"],
 				"correct_answer_index": correctAnswerIndex,
@@ -136,9 +142,15 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 			}
 		} else if question.Type == "short_answer" {
 			correctAnswer := question.Answers[0]
-			jawabanUser := detail["index_jawaban"].(string)
+			var jawabanUser string
+			
+			if val, ok := detail["answer_text"].(string); ok {
+				jawabanUser = val
+			} else if val, ok := detail["index_jawaban"].(string); ok {
+				jawabanUser = val
+			}
 
-			if strings.ToLower(correctAnswer.Content) == strings.ToLower(jawabanUser) {
+			if strings.TrimSpace(strings.ToLower(correctAnswer.Content)) == strings.TrimSpace(strings.ToLower(jawabanUser)) {
 				exp = exp + question.Exp
 				point = point + question.Point
 
@@ -152,17 +164,22 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 				"feedback":             question.Feedback,
 				"exp_gained":           exp,
 				"point_gained":         point,
-				"user_answer_index":    detail["index_jawaban"],
-				"correct_answer_index": correctAnswer.Content,
+				"user_answer":          jawabanUser,
+				"correct_answer":       correctAnswer.Content,
 				"type":                 question.Type,
 			}
 		} else if question.Type == "essay" {
 			fmt.Println("Ada soal essay nih")
 			correctAnswer := question.Answers[0]
-			jawabanUser := detail["index_jawaban"].(string)
+			var jawabanUser string
+			
+			if val, ok := detail["answer_text"].(string); ok {
+				jawabanUser = val
+			} else if val, ok := detail["index_jawaban"].(string); ok {
+				jawabanUser = val
+			}
 
 			flag := true
-
 			var similarity float64 = 0
 
 			for flag {
@@ -170,7 +187,6 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 				fmt.Println(result)
 				fmt.Println(err)
 				if err == nil {
-
 					flag = false
 				}
 				similarity = result
@@ -190,8 +206,9 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 				"feedback":             question.Feedback,
 				"exp_gained":           exp,
 				"point_gained":         point,
-				"user_answer_index":    detail["index_jawaban"],
-				"correct_answer_index": correctAnswer.Content,
+				"user_answer":          jawabanUser,
+				"correct_answer":       correctAnswer.Content,
+				"similarity_score":     similarity,
 				"type":                 question.Type,
 			}
 		} else if question.Type == "multiple_answer" {
@@ -262,10 +279,120 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 				"user_answer_index":      detail["index_jawaban"],
 				"type":                   question.Type,
 			}
+		} else if question.Type == "matching" {
+			// Matching question type
+			// Format: each answer contains keyword|explanation (separated by |)
+			// is_correct = 1 indicates valid matching pair
+			// Example: "Variable|Container untuk menyimpan data"
+			
+			var userMatchings []map[string]interface{}
+			if matchings, ok := detail["matchings"].([]interface{}); ok {
+				for _, m := range matchings {
+					userMatchings = append(userMatchings, m.(map[string]interface{}))
+				}
+			}
+
+			// Parse all answers to extract keywords and explanations
+			var matchingPairs []map[string]interface{}
+			var keywordsList []map[string]interface{}
+			
+			for _, answer := range question.Answers {
+				if answer.IsCorrect {
+					// Parse content: "keyword|explanation"
+					parts := strings.Split(answer.Content, "|")
+					keyword := strings.TrimSpace(parts[0])
+					explanation := ""
+					
+					if len(parts) > 1 {
+						explanation = strings.TrimSpace(parts[1])
+					}
+					
+					pair := map[string]interface{}{
+						"id":          answer.ID,
+						"keyword":     keyword,
+						"explanation": explanation,
+					}
+					
+					matchingPairs = append(matchingPairs, pair)
+					keywordsList = append(keywordsList, map[string]interface{}{
+						"id":      answer.ID,
+						"keyword": keyword,
+					})
+				}
+			}
+
+			// Count total matching pairs
+			totalMatchPairs := len(matchingPairs)
+			var userCorrectCount int = 0
+
+			// Validate user matchings
+			for _, userMatch := range userMatchings {
+				var matchID int
+				if mID, ok := userMatch["match_id"].(float64); ok {
+					matchID = int(mID)
+				} else if mID, ok := userMatch["match_id"].(int); ok {
+					matchID = mID
+				}
+				
+				// Check if this match ID exists in our valid pairs
+				for _, pair := range matchingPairs {
+					if pID, ok := pair["id"].(uint); ok && matchID == int(pID) {
+						userCorrectCount++
+						break
+					}
+				}
+			}
+
+			var expGained int = 0
+			var pointGained int = 0
+
+			// Calculate score based on correct matches
+			if totalMatchPairs > 0 {
+				if userCorrectCount == totalMatchPairs && len(userMatchings) == totalMatchPairs {
+					// Perfect match - all pairs matched correctly
+					expGained = question.Exp
+					pointGained = question.Point
+					totalCorrect += 1
+				} else if userCorrectCount > 0 {
+					// Partial match - give proportional score
+					percentage := float64(userCorrectCount) / float64(totalMatchPairs)
+					expGained = int(float64(question.Exp) * percentage)
+					pointGained = int(float64(question.Point) * percentage)
+					
+					// Count as correct if more than 50% matched
+					if userCorrectCount > totalMatchPairs/2 {
+						totalCorrect += 1
+					}
+				}
+			}
+
+			totalExp += expGained
+			totalPoint += pointGained
+
+			takeExerciseAnswer[key] = map[string]interface{}{
+				"question_id":       question.ID,
+				"feedback":          question.Feedback,
+				"exp_gained":        expGained,
+				"point_gained":      pointGained,
+				"user_matchings":    userMatchings,
+				"correct_count":     userCorrectCount,
+				"total_matches":     totalMatchPairs,
+				"keywords":          keywordsList,
+				"all_pairs":         matchingPairs,
+				"user_answer_index": detail["index_jawaban"],
+				"type":              question.Type,
+			}
 		}
 	}
 
-	totalQuestions := float64(len(exercise.Questions))
+	totalQuestions := float64(len(answersJSON))
+	// If answersJSON is empty for some reason, fallback to exercise pool size or a minimum of 1
+	if totalQuestions == 0 {
+		totalQuestions = float64(len(exercise.Questions))
+	}
+	if totalQuestions == 0 {
+		totalQuestions = 1
+	}
 	score := totalCorrect / totalQuestions
 
 	answerDetail, err := json.Marshal(takeExerciseAnswer)
@@ -295,7 +422,7 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 		return nil, err
 	}
 
-	err = e.userRepo.AddExp(userID, totalPoint)
+	err = e.userRepo.AddExp(userID, totalExp)
 
 	if err != nil {
 		return nil, err

@@ -301,8 +301,8 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 				}
 			}
 
-			expGained += expGained
-			expGained += pointGained
+			rewardExp += expGained
+			rewardPoint += pointGained
 
 			takeQuestAnswer = map[string]interface{}{
 				"question_id":            question.ID,
