@@ -37,7 +37,7 @@ func main() {
 	lessonService := service.NewLessonService(lessonRepo)
 	exerciseService := service.NewExerciseService(exerciseRepo)
 	leaderboardService := service.NewLeaderboardService(userRepo)
-	questService := service.NewQuestService(questRepo)
+	questService := service.NewQuestService(questRepo, userRepo)
 	discussionService := service.NewDiscussionService(discussionRepo)
 	levelService := service.NewLevelService(levelRepo)
 	avatarService := service.NewAvatarService(avatarRepo)

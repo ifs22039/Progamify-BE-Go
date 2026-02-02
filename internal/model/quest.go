@@ -9,8 +9,10 @@ type Quest struct {
 	Timer 		 int 					 `json:"timer" gorm:"not null;"`
 	Point      int           `json:"point" gorm:"not null"`
 	Exp        int           `json:"exp" gorm:"not null"`
-	Difficulty string        `json:"difficulty" gorm:"size:255;not null"`
+	DifficultyLabel string  `json:"difficulty_label" gorm:"size:50;not null"`
+	DifficultyIRT   float64 `json:"difficulty_irt" gorm:"default:0"`
 	Type       string        `json:"type" gorm:"not null"`
 	Feedback   string        `json:"feedback"`
 	Answers    []QuestAnswer `json:"answers" gorm:"foreignKey:QuestID"`
+	Beta  float64 					 `gorm:"default:0"`
 }

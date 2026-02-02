@@ -21,4 +21,8 @@ type TakeExercise struct {
 	TotalPoint    int             `json:"total_point"`
 	RewardExp     int             `json:"reward_exp"`
 	RewardPoint   int             `json:"reward_point"`
+
+	Probability float64 `json:"probability"`
+	ThetaBefore float64 `json:"theta_before"`
+	ThetaAfter  float64 `json:"theta_after"`
 }

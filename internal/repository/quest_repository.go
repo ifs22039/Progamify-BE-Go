@@ -3,8 +3,7 @@ package repository
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"log"
+	"math"
 	"math/rand"
 	"strings"
 	"time"
@@ -15,15 +14,43 @@ import (
 	"gorm.io/gorm"
 )
 
+
+
+
 type QuestRepository interface {
 	GetQuestByUserID(userID uint) (*model.Quest, error)
+	GetQuestByID(id uint) (*model.Quest, error)
+	GetAdaptiveQuest(theta float64) (*model.Quest, error)
 	GetDifficultyByLevel(levelId uint) string
-	AddTakeQuest(userID uint, request model.SubmitQuestRequest) (*model.TakeQuest, error)
+
+	GradeQuest(
+		user *model.User,
+		quest *model.Quest,
+		request model.SubmitQuestRequest,
+	) (*model.TakeQuest, error)
+
+	CreateTakeQuest(takeQuest *model.TakeQuest) error
 }
 
 type questRepository struct {
-	db *gorm.DB
+	db       *gorm.DB
 	userRepo UserRepository
+}
+
+func NewQuestRepository(db *gorm.DB, userRepo UserRepository) QuestRepository {
+	return &questRepository{db: db, userRepo: userRepo}
+}
+
+//////////////////////////////
+// QUEST SELECTION
+//////////////////////////////
+
+func (qr *questRepository) GetQuestByID(id uint) (*model.Quest, error) {
+	var quest model.Quest
+	if err := qr.db.Preload("Answers").First(&quest, id).Error; err != nil {
+		return nil, err
+	}
+	return &quest, nil
 }
 
 func (qr *questRepository) GetQuestByUserID(userID uint) (*model.Quest, error) {
@@ -40,8 +67,26 @@ func (qr *questRepository) GetQuestByUserID(userID uint) (*model.Quest, error) {
 	difficulty := qr.GetDifficultyByLevel(uint(level.Level))
 
 	var quest model.Quest
-	if err := qr.db.Preload("Answers").Where("difficulty = ?", difficulty).Order("RAND()").First(&quest).Error; err != nil {
+	if err := qr.db.
+		Preload("Answers").
+		Where("difficulty = ?", difficulty).
+		Order("RAND()").
+		First(&quest).Error; err != nil {
 		return nil, errors.New("no suitable quest found")
+	}
+
+	return &quest, nil
+}
+func (qr *questRepository) GetAdaptiveQuest(theta float64) (*model.Quest, error) {
+	var quest model.Quest
+
+	err := qr.db.
+		Order(gorm.Expr("ABS(beta - ?)", theta)).
+		Preload("Answers").
+		First(&quest).Error
+
+	if err != nil {
+		return nil, err
 	}
 
 	return &quest, nil
@@ -49,327 +94,177 @@ func (qr *questRepository) GetQuestByUserID(userID uint) (*model.Quest, error) {
 
 func (qr *questRepository) GetDifficultyByLevel(levelId uint) string {
 	rand.Seed(time.Now().UnixNano())
-	probability := rand.Float64() 
+	p := rand.Float64()
 
 	switch {
-	case levelId <= 10: 
+	case levelId <= 10:
 		return "Easy"
-	case levelId <= 29: 
-		if probability < 0.7 {
+	case levelId <= 29:
+		if p < 0.7 {
 			return "Easy"
 		}
 		return "Medium"
 	case levelId <= 49:
-		if probability < 0.5 {
+		if p < 0.5 {
 			return "Medium"
-		} else if probability < 0.85 {
+		} else if p < 0.85 {
 			return "Hard"
 		}
 		return "Easy"
 	case levelId <= 79:
-		if probability < 0.4 {
+		if p < 0.4 {
 			return "Medium"
-		} else if probability < 0.75 {
+		} else if p < 0.75 {
 			return "Hard"
 		}
 		return "Very Hard"
-	default: 
-		if probability < 0.3 {
+	default:
+		if p < 0.3 {
 			return "Medium"
-		} else if probability < 0.6 {
+		} else if p < 0.6 {
 			return "Hard"
 		}
 		return "Very Hard"
 	}
 }
 
-func NewQuestRepository(db *gorm.DB, userRepo UserRepository) QuestRepository {
-	return &questRepository{db, userRepo}
+//////////////////////////////
+// TAKE QUEST (FULL GRADING + IRT)
+//////////////////////////////
+
+func (qr *questRepository) CreateTakeQuest(takeQuest *model.TakeQuest) error {
+	return qr.db.Create(takeQuest).Error
 }
 
-func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRequest) (*model.TakeQuest, error) {
+//////////////////////////////
+// IRT UTIL (INLINE, TIDAK DIPISAH)
+//////////////////////////////
 
-	var quest model.Quest
+func raschProbability(theta, beta float64) float64 {
+	return math.Exp(theta-beta) / (1 + math.Exp(theta-beta))
+}
 
-	err := qr.db.Preload("Answers").First(&quest, request.QuestID).Error
-
-	if err != nil {
-		return nil, err
+func updateTheta(theta, p float64, correct bool) float64 {
+	var u float64 = 0
+	if correct {
+		u = 1
 	}
+	learningRate := 0.3
+	return theta + learningRate*(u-p)
+}
+
+//////////////////////////////
+// LEGACY GRADING (TIDAK DIHAPUS)
+//////////////////////////////
+
+func (qr *questRepository) GradeQuest(
+	user *model.User,
+	quest *model.Quest,
+	request model.SubmitQuestRequest,
+) (*model.TakeQuest, error) {
 
 	answerJSON := request.Answer
-
-	takeQuestAnswer := make(map[string]interface{})
-
-	rewardExp := 0
-	rewardPoint := 0
-	is_correct := false
-
-	//Grading
-	
 	detail := answerJSON.(map[string]interface{})
 
 	var question model.Quest
-
-	err = qr.db.Preload("Answers").First(&question, detail["question_id"]).Error
-
-	if err != nil {
+	if err := qr.db.Preload("Answers").First(&question, detail["question_id"]).Error; err != nil {
 		return nil, err
 	}
+
+	rewardExp := 0
+	rewardPoint := 0
+	isCorrect := false
 
 	exp := 0
 	point := 0
-	// rewardExp += question.Exp
-	// rewardPoint += question.Point
 
-	if question.Type == "multiple_choice" {
-		fmt.Println("DEBUG: Iterating over multiple choice")
-		var correctAnswer model.QuestAnswer
-		var correctAnswerIndex int
-		for index, item := range question.Answers {
-			if item.IsCorrect {
-				correctAnswer = item
-				correctAnswerIndex = index
+	takeQuestAnswer := make(map[string]interface{})
+
+	switch question.Type {
+
+	case "multiple_choice":
+		var correct model.QuestAnswer
+		var correctIndex int
+		for i, a := range question.Answers {
+			if a.IsCorrect {
+				correct = a
+				correctIndex = i
 			}
 		}
 
-		// fmt.Printf("Debug: detail[\"answer_id\"] value: %v, type: %T\n", detail["answer_id"], detail["answer_id"])
-
-
-		if int(correctAnswer.ID) == int(detail["answer_id"].(float64)) {
-			exp = exp + question.Exp
-			point = point + question.Point
-
-			rewardExp += exp
-			rewardPoint += point
-			is_correct = true
+		if int(correct.ID) == int(detail["answer_id"].(float64)) {
+			exp += question.Exp
+			point += question.Point
+			isCorrect = true
 		}
 
 		takeQuestAnswer = map[string]interface{}{
 			"question_id":          question.ID,
-			"feedback":             question.Feedback,
-			"exp_gained":           exp,
-			"point_gained":         point,
 			"user_answer_id":       detail["answer_id"],
-			"user_answer_index":    detail["index_jawaban"],
-			"correct_answer_id":    correctAnswer.ID,
-			"correct_answer_index": correctAnswerIndex,
-		}
-	} else if question.Type == "true_false" {
-		correctAnswer := question.Answers[0]
-		correctAnswerIndex := 0
-		jawabanUser := detail["answer_text"].(string)
-
-		if strings.ToLower(correctAnswer.Content) == strings.ToLower(jawabanUser) {
-			correctAnswerIndex = int(detail["index_jawaban"].(float64))
-			exp = exp + question.Exp
-			point = point + question.Point
-
-			rewardExp += exp
-			rewardPoint += point
-			is_correct = true
-		} else {
-			if int(detail["index_jawaban"].(float64)) == 0 {
-				correctAnswerIndex = 1
-			} else {
-				correctAnswerIndex = 0
-			}
+			"correct_answer_id":    correct.ID,
+			"correct_answer_index": correctIndex,
 		}
 
-		takeQuestAnswer = map[string]interface{}{
-			"question_id":          question.ID,
-			"feedback":             question.Feedback,
-			"exp_gained":           exp,
-			"point_gained":         point,
-			"user_answer":          detail["answer_text"],
-			"correct_answer":       correctAnswer.Content,
-			"user_answer_index":    detail["index_jawaban"],
-			"correct_answer_index": correctAnswerIndex,
-		}
-	} else if question.Type == "short_answer" {
-		correctAnswer := question.Answers[0]
-		jawabanUser := detail["answer_text"].(string)
-
-		if strings.ToLower(correctAnswer.Content) == strings.ToLower(jawabanUser) {
-			exp = exp + question.Exp
-			point = point + question.Point
-
-			rewardExp += exp
-			rewardPoint += point
-			is_correct = true
+	case "true_false", "short_answer":
+		correct := question.Answers[0]
+		userAnswer := strings.ToLower(detail["answer_text"].(string))
+		if strings.ToLower(correct.Content) == userAnswer {
+			exp += question.Exp
+			point += question.Point
+			isCorrect = true
 		}
 
-		takeQuestAnswer = map[string]interface{}{
-			"question_id":          question.ID,
-			"feedback":             question.Feedback,
-			"exp_gained":           exp,
-			"point_gained":         point,
-			"user_answer_index":    detail["index_jawaban"],
-			"user_answer":          detail["answer_text"],
-			"correct_answer":       correctAnswer.Content,
-		}
-	} else if question.Type == "essay" {
-		fmt.Println("masuk ke essay kita")
-		correctAnswer := question.Answers[0]
-		jawabanUser := detail["answer_text"].(string)
-
-		log.Println("Correct Answer:", correctAnswer.Content) 
-    log.Println("User Answer:", jawabanUser)     
+	case "essay":
+		correct := question.Answers[0]
+		userAnswer := detail["answer_text"].(string)
 
 		flag := true
-
-		var similarity float64 = 0
+		var similarity float64
 
 		for flag {
-			result, err := utils.EssayGrading(correctAnswer.Content, jawabanUser)
-			fmt.Println(err)
+			result, err := utils.EssayGrading(correct.Content, userAnswer)
 			if err == nil {
 				flag = false
+				similarity = result
 			}
-			similarity = result
 		}
 
 		if similarity >= 50 {
-			exp = exp + question.Exp
-			point = point + question.Point
-
-			rewardExp += exp
-			rewardPoint += point
-			is_correct = true
+			exp += question.Exp
+			point += question.Point
+			isCorrect = true
 		}
-
-		takeQuestAnswer = map[string]interface{}{
-			"question_id":          question.ID,
-			"feedback":             question.Feedback,
-			"exp_gained":           exp,
-			"point_gained":         point,
-			"user_answer_index":    detail["index_jawaban"],
-			"correct_answer_index": 0,
-			"user_answer":          detail["answer_text"],
-			"correct_answer":       correctAnswer.Content,
-		}
-	} else if question.Type == "multiple_answer" {
-		point := question.Point
-			exp := question.Exp
-
-			var userAnswers []int
-			for _, val := range detail["answers"].([]interface{}) {
-				answer := val.(map[string]interface{})
-				if answerID, ok := answer["answer_id"].(float64); ok {
-					userAnswers = append(userAnswers, int(answerID))
-				}
-			}
-
-			var jawabanUserBenar []int
-
-			var correctAnswers []int
-			var correctAnswersIndex []int
-			for index, item := range question.Answers {
-				if item.IsCorrect {
-					correctAnswers = append(correctAnswers, int(item.ID))
-					correctAnswersIndex = append(correctAnswersIndex, index)
-					for _, ans := range userAnswers {
-						if ans == int(item.ID) {
-							jawabanUserBenar = append(jawabanUserBenar, int(item.ID))
-						}
-					}
-				}
-			}
-
-			var countJawabanBenar = len(jawabanUserBenar)
-			var countJawabanSalah = len(userAnswers) - len(jawabanUserBenar)
-
-			var expGained int = 0
-			var pointGained int = 0
-
-			if countJawabanBenar == len(correctAnswers) && len(correctAnswers) == len(userAnswers) {
-				expGained = exp
-				pointGained = point
-				is_correct = true
-			} else {
-				expEachAns := exp / len(correctAnswers)
-				pointEachAns := point / len(correctAnswers)
-				if countJawabanBenar == countJawabanSalah || countJawabanSalah > countJawabanBenar {
-					fmt.Println("Condition 1")
-					expGained = 0
-					pointGained = 0
-				} else if countJawabanBenar > countJawabanSalah {
-					fmt.Println("Condition 2")
-					expGained = (expEachAns * countJawabanBenar) - (expEachAns * countJawabanSalah)
-					pointGained = (pointEachAns * countJawabanBenar) - (pointEachAns * countJawabanSalah)
-					is_correct = true
-				}
-			}
-
-			expGained += expGained
-			expGained += pointGained
-
-			takeQuestAnswer = map[string]interface{}{
-				"question_id":            question.ID,
-				"feedback":               question.Feedback,
-				"exp_gained":             expGained,
-				"point_gained":           pointGained,
-				"user_answer_id":         detail["answer_id"],
-				"user_correct_answer_id": jawabanUserBenar,
-				"correct_answer_index":   0,
-				"correct_answers_index" : correctAnswersIndex,
-				"user_answer_index":      detail["index_jawaban"],
-				"type":                   question.Type,
-				"user_answer":          detail["answer_text"],
-			}
-	} else {
-		fmt.Println("DEBUG: Question type didn't detect")
 	}
 
-	var score float64
-	if is_correct {
-			score = 100
-	} else {
-			score = 0
-	}
+	rewardExp += exp
+	rewardPoint += point
 
-	answerDetail, err := json.Marshal(takeQuestAnswer)
-	if err != nil {
+	// IRT
+	p := raschProbability(user.Theta, quest.Beta)
+	thetaBefore := user.Theta
+	thetaAfter := updateTheta(user.Theta, p, isCorrect)
+
+	user.Theta = thetaAfter
+	if err := qr.userRepo.Update(user); err != nil {
 		return nil, err
 	}
 
-	newTakeQuest := model.TakeQuest{
-		QuestID:    	 quest.ID,
-		UserID:        userID,
-		Answer:       answerDetail,
-		Score:         score,
-		IsCorrect:  	 is_correct,
-		RewardExp:     rewardExp,
-		RewardPoint:   rewardPoint,
+	answerDetail, _ := json.Marshal(takeQuestAnswer)
+
+	takeQuest := &model.TakeQuest{
+		UserID:      user.ID,
+		QuestID:    quest.ID,
+		Answer:     answerDetail,
+		IsCorrect:  isCorrect,
+		Score:      func() float64 { if isCorrect { return 100 } else { return 0 } }(),
+		RewardExp:  rewardExp,
+		RewardPoint: rewardPoint,
+
+		// IRT
+		Probability: p,
+		ThetaBefore: thetaBefore,
+		ThetaAfter:  thetaAfter,
 	}
 
-	// fmt.Printf("Debug:\n QuestID: %v,\n UserID: %v,\n Answers: %v,\n Score:%v,\n IsCorrect:%v,\n RewardExp:%v,\n RewardPoint:%v,\n", quest.ID, userID, answerDetail, score, is_correct, rewardExp, rewardPoint)
-	// fmt.Printf("takeQuestAnswer: %+v\n", takeQuestAnswer)
-	if qr.userRepo == nil {
-    fmt.Printf("userRepo nil")
-	}
-	err = qr.userRepo.AddPoint(userID, rewardPoint)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = qr.userRepo.AddExp(userID, rewardExp)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = qr.userRepo.CheckLevel(userID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err =qr.db.Create(&newTakeQuest).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return &newTakeQuest, err
+	return takeQuest, nil
 }

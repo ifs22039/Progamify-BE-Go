@@ -15,13 +15,19 @@ type ExerciseRepository interface {
 	AddTakeExercise(userID uint, request model.SubmitExerciseRequest) (*model.TakeExercise, error)
 }
 
+func NewExerciseRepository(db *gorm.DB, userRepo UserRepository) ExerciseRepository {
+	return &exerciseRepository{db: db, userRepo: userRepo}
+}
+
 type exerciseRepository struct {
 	db       *gorm.DB
 	userRepo UserRepository
 }
 
-func NewExerciseRepository(db *gorm.DB, userRepo UserRepository) ExerciseRepository {
-	return &exerciseRepository{db, userRepo}
+func (e *exerciseRepository) CreateTakeExercise(
+	take *model.TakeExercise,
+) error {
+	return e.db.Create(take).Error
 }
 
 func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitExerciseRequest) (*model.TakeExercise, error) {

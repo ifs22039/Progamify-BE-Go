@@ -15,4 +15,10 @@ type TakeQuest struct {
 	Score         float64         `json:"score"`
 	RewardExp     int             `json:"reward_exp"`
 	RewardPoint   int             `json:"reward_point"`
+
+	Probability float64 `json:"probability"`
+	ThetaBefore float64 `json:"theta_before"`
+	ThetaAfter  float64 `json:"theta_after"`
+
+
 }

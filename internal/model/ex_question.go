@@ -10,5 +10,6 @@ type ExQuestion struct {
 	Content    string     `json:"content" gorm:"not null"`
 	Type       string     `json:"type" gorm:"not null"`
 	Feedback   string     `json:"feedback"`
+	Beta       float64    `json:"beta" gorm:"default:0"`
 	Answers    []ExAnswer `json:"answers" gorm:"foreignKey:ExQuestionID"`
 }

@@ -45,7 +45,7 @@ func (h *QuestHandler) SubmitQuest(c *gin.Context) {
 		return
 	}
 
-	takeQuest, err := h.questService.AddTakeQuest(userId, request)
+	takeQuest, err := h.questService.SubmitQuest(userId, request)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to submit exercise"})
