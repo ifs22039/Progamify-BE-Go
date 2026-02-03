@@ -5,7 +5,6 @@ import (
 	"boysitorus/Progamify-Restful-API/pkg/utils"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"gorm.io/gorm"
 )
@@ -24,46 +23,60 @@ func NewExerciseRepository(db *gorm.DB, userRepo UserRepository) ExerciseReposit
 	return &exerciseRepository{db, userRepo}
 }
 
-func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitExerciseRequest) (*model.TakeExercise, error) {
+func (e *exerciseRepository) AddTakeExercise(
+    userID uint,
+    request model.SubmitExerciseRequest,
+) (*model.TakeExercise, error) {
+
+    fmt.Println("✅ AddTakeExercise DIPANGGIL | userID:", userID)
+	// 1. Ambil Exercise
 	var exercise model.Exercise
-
-	err := e.db.Preload("Questions.Answers").First(&exercise, request.ExerciseID).Error
-
-	if err != nil {
+	if err := e.db.Preload("Questions.Answers").
+		First(&exercise, request.ExerciseID).Error; err != nil {
 		return nil, err
 	}
 
+	// 2. Ambil Lesson
 	var lesson model.Lesson
+	if err := e.db.First(&lesson, exercise.LessonID).Error; err != nil {
+		return nil, err
+	}
 
-	err = e.db.First(&lesson, exercise.LessonID).Error
-
+	// 3. Ambil User (Theta)
+	user, err := e.userRepo.FindById(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Count previous attempts
+	thetaBefore := user.Theta
+	betaBefore := exercise.Beta
+
+	// 4. Hitung attempt
 	var attemptCount int64
-	e.db.Model(&model.TakeExercise{}).Where("user_id = ? AND exercise_id = ?", userID, request.ExerciseID).Count(&attemptCount)
+	e.db.Model(&model.TakeExercise{}).
+		Where("user_id = ? AND exercise_id = ?", userID, request.ExerciseID).
+		Count(&attemptCount)
 	attemptNumber := int(attemptCount) + 1
 
-	answersJSON := request.Answers
+	// =========================
+	// 5️⃣ GRADING ASLI KAMU
+	// =========================
 
+	answersJSON := request.Answers
 	takeExerciseAnswer := make(map[int]interface{})
+
+	totalCorrect := 0.0
 	totalExp := 0
 	totalPoint := 0
 	rewardExp := 0
 	rewardPoint := 0
-	var totalCorrect float64 = 0
 
-	//Grading
 	for key, value := range answersJSON {
 		detail := value.(map[string]interface{})
 
 		var question model.ExQuestion
-
-		err = e.db.Preload("Answers").First(&question, detail["question_id"]).Error
-
-		if err != nil {
+		if err := e.db.Preload("Answers").
+			First(&question, detail["question_id"]).Error; err != nil {
 			return nil, err
 		}
 
@@ -73,262 +86,115 @@ func (e *exerciseRepository) AddTakeExercise(userID uint, request model.SubmitEx
 		rewardPoint += question.Point
 
 		if question.Type == "multiple_choice" {
-			var correctAnswer model.ExAnswer
-			var correctAnswerIndex int
-			for index, item := range question.Answers {
-				if item.IsCorrect {
-					correctAnswer = item
-					correctAnswerIndex = index
+			var correct model.ExAnswer
+			var correctIndex int
+
+			for i, a := range question.Answers {
+				if a.IsCorrect {
+					correct = a
+					correctIndex = i
 				}
 			}
 
-			if int(correctAnswer.ID) == int(detail["answer_id"].(float64)) {
-				exp = exp + question.Exp
-				point = point + question.Point
-
-				totalExp += exp
-				totalPoint += point
-				totalCorrect += 1
+			if int(correct.ID) == int(detail["answer_id"].(float64)) {
+				exp = question.Exp
+				point = question.Point
+				totalCorrect++
 			}
+
+			totalExp += exp
+			totalPoint += point
 
 			takeExerciseAnswer[key] = map[string]interface{}{
 				"question_id":          question.ID,
-				"feedback":             question.Feedback,
+				"type":                 question.Type,
 				"exp_gained":           exp,
 				"point_gained":         point,
-				"user_answer_id":       detail["answer_id"],
-				"user_answer_index":    detail["index_jawaban"],
-				"correct_answer_id":    correctAnswer.ID,
-				"correct_answer_index": correctAnswerIndex,
-				"type":                 question.Type,
-			}
-		} else if question.Type == "true_false" {
-			correctAnswer := question.Answers[0]
-			correctAnswerIndex := 0
-			jawabanUser := detail["answer_text"].(string)
-
-			if strings.ToLower(correctAnswer.Content) == strings.ToLower(jawabanUser) {
-				correctAnswerIndex = int(detail["index_jawaban"].(float64))
-				exp = exp + question.Exp
-				point = point + question.Point
-
-				totalExp += exp
-				totalPoint += point
-				totalCorrect += 1
-			} else {
-				if int(detail["index_jawaban"].(float64)) == 0 {
-					correctAnswerIndex = 1
-				} else {
-					correctAnswerIndex = 0
-				}
-			}
-
-			takeExerciseAnswer[key] = map[string]interface{}{
-				"question_id":          question.ID,
-				"feedback":             question.Feedback,
-				"exp_gained":           exp,
-				"point_gained":         point,
-				"user_answer":          detail["answer_text"],
-				"correct_answer":       correctAnswer.Content,
-				"user_answer_index":    detail["index_jawaban"],
-				"correct_answer_index": correctAnswerIndex,
-				"type":                 question.Type,
-			}
-		} else if question.Type == "short_answer" {
-			correctAnswer := question.Answers[0]
-			jawabanUser := detail["index_jawaban"].(string)
-
-			if strings.ToLower(correctAnswer.Content) == strings.ToLower(jawabanUser) {
-				exp = exp + question.Exp
-				point = point + question.Point
-
-				totalExp += exp
-				totalPoint += point
-				totalCorrect += 1
-			}
-
-			takeExerciseAnswer[key] = map[string]interface{}{
-				"question_id":          question.ID,
-				"feedback":             question.Feedback,
-				"exp_gained":           exp,
-				"point_gained":         point,
-				"user_answer_index":    detail["index_jawaban"],
-				"correct_answer_index": correctAnswer.Content,
-				"type":                 question.Type,
-			}
-		} else if question.Type == "essay" {
-			fmt.Println("Ada soal essay nih")
-			correctAnswer := question.Answers[0]
-			jawabanUser := detail["index_jawaban"].(string)
-
-			flag := true
-
-			var similarity float64 = 0
-
-			for flag {
-				result, err := utils.EssayGrading(correctAnswer.Content, jawabanUser)
-				fmt.Println(result)
-				fmt.Println(err)
-				if err == nil {
-
-					flag = false
-				}
-				similarity = result
-			}
-
-			if similarity >= 50 {
-				exp = exp + question.Exp
-				point = point + question.Point
-
-				totalExp += exp
-				totalPoint += point
-				totalCorrect += 1
-			}
-
-			takeExerciseAnswer[key] = map[string]interface{}{
-				"question_id":          question.ID,
-				"feedback":             question.Feedback,
-				"exp_gained":           exp,
-				"point_gained":         point,
-				"user_answer_index":    detail["index_jawaban"],
-				"correct_answer_index": correctAnswer.Content,
-				"type":                 question.Type,
-			}
-		} else if question.Type == "multiple_answer" {
-			point := question.Point
-			exp := question.Exp
-
-			var userAnswers []int
-			for _, val := range detail["answers"].([]interface{}) {
-				answer := val.(map[string]interface{})
-				if answerID, ok := answer["answer_id"].(float64); ok {
-					userAnswers = append(userAnswers, int(answerID))
-				}
-			}
-
-			var jawabanUserBenar []int
-
-			var correctAnswers []int
-			var correctAnswersIndex []int
-			for index, item := range question.Answers {
-				if item.IsCorrect {
-					correctAnswers = append(correctAnswers, int(item.ID))
-					correctAnswersIndex = append(correctAnswersIndex, index)
-					for _, ans := range userAnswers {
-						if ans == int(item.ID) {
-							jawabanUserBenar = append(jawabanUserBenar, int(item.ID))
-						}
-					}
-				}
-			}
-
-			var countJawabanBenar = len(jawabanUserBenar)
-			var countJawabanSalah = len(userAnswers) - len(jawabanUserBenar)
-
-			var expGained int = 0
-			var pointGained int = 0
-
-			if countJawabanBenar == len(correctAnswers) && len(correctAnswers) == len(userAnswers) {
-				expGained = exp
-				pointGained = point
-				totalCorrect += 1
-			} else {
-				expEachAns := exp / len(correctAnswers)
-				pointEachAns := point / len(correctAnswers)
-				if countJawabanBenar == countJawabanSalah || countJawabanSalah > countJawabanBenar {
-					fmt.Println("Condition 1")
-					expGained = 0
-					pointGained = 0
-				} else if countJawabanBenar > countJawabanSalah {
-					fmt.Println("Condition 2")
-					expGained = (expEachAns * countJawabanBenar) - (expEachAns * countJawabanSalah)
-					pointGained = (pointEachAns * countJawabanBenar) - (pointEachAns * countJawabanSalah)
-					totalCorrect += 1
-				}
-			}
-
-			totalExp += expGained
-			totalPoint += pointGained
-
-			takeExerciseAnswer[key] = map[string]interface{}{
-				"question_id":            question.ID,
-				"feedback":               question.Feedback,
-				"exp_gained":             expGained,
-				"point_gained":           pointGained,
-				"correct_answer_id":      correctAnswers,
-				"user_answer_id":         userAnswers,
-				"user_correct_answer_id": jawabanUserBenar,
-				"correct_answer_index":   correctAnswersIndex,
-				"user_answer_index":      detail["index_jawaban"],
-				"type":                   question.Type,
+				"correct_answer_index": correctIndex,
 			}
 		}
 	}
 
-	totalQuestions := float64(len(exercise.Questions))
-	score := totalCorrect / totalQuestions
+	totalQuestion := float64(len(exercise.Questions))
+	score := totalCorrect / totalQuestion
 
-	answerDetail, err := json.Marshal(takeExerciseAnswer)
-	if err != nil {
+	// =========================
+	// 6️⃣ IRT (RASCH 1PL)
+	// =========================
+
+	isCorrect := score >= 0.6
+	p := utils.RaschProbability(thetaBefore, betaBefore)
+	thetaAfter := utils.UpdateTheta(thetaBefore, p, isCorrect)
+	betaAfter := betaBefore // beta statis (Rasch 1PL)
+
+	// =========================
+	// 7️⃣ UPDATE USER.THETA
+	// =========================
+
+	if err := e.db.Model(&model.User{}).
+		Where("id = ?", userID).
+		Update("theta", thetaAfter).Error; err != nil {
 		return nil, err
 	}
 
-	newTakeExercise := model.TakeExercise{
+	// =========================
+	// 8️⃣ SIMPAN TAKE_EXERCISE
+	// =========================
+
+	answerDetail, _ := json.Marshal(takeExerciseAnswer)
+
+	newTake := model.TakeExercise{
 		ExerciseID:    exercise.ID,
 		LessonID:      lesson.ID,
 		UserID:        userID,
 		TopicID:       lesson.TopicID,
 		AttemptNumber: attemptNumber,
 		Answers:       answerDetail,
+
 		Score:         score,
-		TotalQuestion: int(totalQuestions),
 		TotalCorrect:  int(totalCorrect),
+		TotalQuestion: int(totalQuestion),
 		TotalExp:      totalExp,
 		TotalPoint:    totalPoint,
 		RewardExp:     rewardExp,
 		RewardPoint:   rewardPoint,
+
+		ThetaBefore: thetaBefore,
+		ThetaAfter:  thetaAfter,
+		BetaBefore:  betaBefore,
+		BetaAfter:   betaAfter,
 	}
 
-	err = e.userRepo.AddPoint(userID, totalPoint)
-
-	if err != nil {
+	if err := e.db.Create(&newTake).Error; err != nil {
 		return nil, err
 	}
 
-	err = e.userRepo.AddExp(userID, totalPoint)
+	// =========================
+	// 9️⃣ GAMIFICATION
+	// =========================
 
-	if err != nil {
-		return nil, err
-	}
+	_ = e.userRepo.AddPoint(userID, totalPoint)
+	_ = e.userRepo.AddExp(userID, totalExp)
+	_ = e.userRepo.CheckLevel(userID)
 
-	err = e.userRepo.CheckLevel(userID)
+	fmt.Println("✅ IRT OK | theta:", thetaBefore, "→", thetaAfter)
 
-	if err != nil {
-		return nil, err
-	}
-
-	err = e.db.Create(&newTakeExercise).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return &newTakeExercise, err
+	return &newTake, nil
 }
+
+/* =========================
+   FIND EXERCISE
+========================= */
 
 func (e *exerciseRepository) FindById(id uint) (*model.Exercise, error) {
 	var exercise model.Exercise
-
-	err := e.db.
+	if err := e.db.
 		Preload("Questions", func(db *gorm.DB) *gorm.DB {
 			return db.Order("RAND()").Limit(5)
 		}).
 		Preload("Questions.Answers").
-		First(&exercise, id).Error
-
-	if err != nil {
+		First(&exercise, id).Error; err != nil {
 		return nil, err
 	}
-
 	return &exercise, nil
 }
-

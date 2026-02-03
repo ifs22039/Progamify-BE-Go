@@ -14,6 +14,8 @@ type User struct {
 	LevelId    uint   `json:"level_id" gorm:"not null"`
 	AvatarID   uint   `json:"avatar_id"`
 	Avatar     Avatar `json:"avatar" gorm:"foreignKey:AvatarID;"`
+	Theta float64 `json:"theta" gorm:"column:theta;default:0"`
+	
 }
 
 type UserWithRank struct {

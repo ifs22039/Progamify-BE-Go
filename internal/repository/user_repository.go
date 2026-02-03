@@ -65,7 +65,9 @@ func (r *userRepository) CheckLevel(userID uint) error {
 	}
 
 	if user.LevelId < newLevel.ID {
-		err = r.db.Model(&user).Update("level_id", newLevel.ID).Error
+		err = r.db.Model(&model.User{}).
+    Where("id = ?", userID).
+    Update("level_id", newLevel.ID).Error
 		if err != nil {
 			return err
 		}
@@ -117,41 +119,17 @@ func (r *userRepository) ExistsByEmail(email string) (bool, error) {
 }
 
 func (r *userRepository) AddExp(userID uint, exp int) error {
-	var user model.User
-	err := r.db.First(&user, userID).Error
-
-	if err != nil {
-		return err
-	}
-
-	user.TotalExp += exp
-
-	err = r.db.Save(&user).Error
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return r.db.Model(&model.User{}).
+		Where("id = ?", userID).
+		Update("total_exp", gorm.Expr("total_exp + ?", exp)).
+		Error
 }
 
 func (r *userRepository) AddPoint(userID uint, point int) error {
-	var user model.User
-	err := r.db.First(&user, userID).Error
-
-	if err != nil {
-		return err
-	}
-
-	user.TotalPoint += point
-
-	err = r.db.Save(&user).Error
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return r.db.Model(&model.User{}).
+		Where("id = ?", userID).
+		Update("total_point", gorm.Expr("total_point + ?", point)).
+		Error
 }
 
 func (r *userRepository) GetTopUsersByExp(limit int, userId uint) ([]model.UserWithRank, error) {
