@@ -216,17 +216,15 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 		log.Println("Correct Answer:", correctAnswer.Content) 
     log.Println("User Answer:", jawabanUser)     
 
-		flag := true
-
 		var similarity float64 = 0
 
-		for flag {
-			result, err := utils.EssayGrading(correctAnswer.Content, jawabanUser)
-			fmt.Println(err)
-			if err == nil {
-				flag = false
-			}
-			similarity = result
+		// grade the essay once; result contains multiple metrics
+		gradeResult, err := utils.EssayGrading(correctAnswer.Content, jawabanUser)
+		if err != nil {
+			log.Printf("Essay grading failed for question %d: %v", question.ID, err)
+		} else {
+			// use final score percentage for correctness check
+			similarity = gradeResult.FinalScore * 100
 		}
 
 		if similarity >= 50 {

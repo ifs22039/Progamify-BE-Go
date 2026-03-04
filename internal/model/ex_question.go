@@ -11,4 +11,5 @@ type ExQuestion struct {
 	Type       string     `json:"type" gorm:"not null"`
 	Feedback   string     `json:"feedback"`
 	Answers    []ExAnswer `json:"answers" gorm:"foreignKey:ExQuestionID"`
+	Beta       float64    `json:"beta" gorm:"column:beta;default:0"`
 }

@@ -44,6 +44,12 @@ func (h *ExerciseHandler) SubmitExercise(c *gin.Context) {
 		return
 	}
 
+	// ensure front-end sent at least one answer
+	if len(request.Answers) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no answers provided"})
+		return
+	}
+
 	takeExercise, err := h.exerciseService.AddTakeExercise(userId, request)
 
 	if err != nil {
