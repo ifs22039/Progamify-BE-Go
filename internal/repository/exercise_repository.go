@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"reflect"
 	"sort"
 	"strings"
@@ -14,7 +15,10 @@ import (
 )
 
 type ExerciseRepository interface {
-	FindById(id uint) (*model.Exercise, error)
+	// FindById returns the exercise along with its questions (and answers).
+	// If `theta` is non‑zero we will choose up to five items whose difficulty
+	// (beta) is closest to the supplied ability using utils.SelectNextItem.
+	FindById(id uint, theta float64, userID uint) (*model.Exercise, error)
 	AddTakeExercise(userID uint, request model.SubmitExerciseRequest) (*model.TakeExercise, error)
 }
 
@@ -85,6 +89,11 @@ func (e *exerciseRepository) AddTakeExercise(
 
 	// Map untuk tracking hasil jawaban benar/salah per soal (dipakai untuk update beta)
 	questionResults := make(map[uint]bool)
+
+	// counters used by the new IRT utilities; we keep separate integers for
+	// theta updates (library UpdateTheta expects correct/total counts).
+	correctCountProgress := 0
+	answeredCount := 0
 
 	// Threshold bisa diatur via config nanti (misal di env atau di tabel exercise)
 	const essayGradingThreshold = 50.0
@@ -494,10 +503,26 @@ case "essay":
 		log.Printf("Unsupported question type '%s' for question %d", question.Type, question.ID)
 	}
 
-		// === IRT per-soal (theta naga diperbarui progresif) ===
+		// === IRT per-soal (theta diperbarui berdasarkan hitungan jawaban) ===
+		// maintain running totals so that theta is recalculated after every item
+		// (makes the adaptation visible within a single exercise session).
+		// NOTE: totalCorrect variable is float64 and used for scoring; we keep
+		// separate integer counters for the theta update.
+		
+		// these variables are declared above the loop
+		
+		// add to progress counters
+		answeredCount++
+		if questionResults[question.ID] {
+			correctCountProgress++
+		}
+
+		// probability used for logging/diagnostics only
 		p := utils.RaschProbability(thetaCurrent, question.Beta)
-		thetaCurrent = utils.UpdateTheta(thetaCurrent, p, questionResults[question.ID])
-		log.Printf("🔁 IRT soal %d | beta=%.4f | correct=%v | theta -> %.4f", question.ID, question.Beta, questionResults[question.ID], thetaCurrent)
+		// compute new theta based on accumulated counts
+		thetaCurrent = utils.UpdateTheta(correctCountProgress, answeredCount)
+		log.Printf("🔁 IRT soal %d | beta=%.4f | correct=%v | theta -> %.4f | p=%.4f",
+			question.ID, question.Beta, questionResults[question.ID], thetaCurrent, p)
 	}
 
 	// because sessions always consist of 5 questions, normalize score to 5
@@ -518,18 +543,26 @@ case "essay":
 	// 6b. Update Beta per Soal
 	// =========================
 	// Setelah grading selesai, update difficulty (beta) setiap soal yang dijawab.
-	// Menggunakan thetaBefore agar update beta tidak bergantung pada theta yang baru saja berubah.
+	// Kita menghitung statistik historis (jumlah benar/total) lalu menambahkan
+	// jawaban saat ini; fungsi utils.UpdateBeta menerima hitungan tersebut.
 	for qID, wasCorrect := range questionResults {
 		var q model.ExQuestion
 		if err := e.db.First(&q, qID).Error; err != nil {
 			log.Printf("⚠️ UpdateBeta: soal %d tidak ditemukan: %v", qID, err)
 			continue
 		}
-		newBeta := utils.UpdateBeta(q.Beta, thetaBefore, wasCorrect)
+		correctCnt, totalCnt, _ := e.computeQuestionStats(qID)
+		// include current response
+		totalCnt++
+		if wasCorrect {
+			correctCnt++
+		}
+		newBeta := utils.UpdateBeta(correctCnt, totalCnt)
 		if err := e.db.Model(&model.ExQuestion{}).Where("id = ?", qID).Update("beta", newBeta).Error; err != nil {
 			log.Printf("⚠️ UpdateBeta: gagal update beta soal %d: %v", qID, err)
 		} else {
-			log.Printf("📊 Beta soal %d: %.4f → %.4f (correct=%v)", qID, q.Beta, newBeta, wasCorrect)
+			log.Printf("📊 Beta soal %d: %.4f → %.4f (prevStats=%d/%d) (correct=%v)",
+				qID, q.Beta, newBeta, correctCnt, totalCnt, wasCorrect)
 		}
 	}
 
@@ -591,15 +624,134 @@ case "essay":
 	return &newTake, nil
 }
 
-func (e *exerciseRepository) FindById(id uint) (*model.Exercise, error) {
+// computeQuestionStats loads previous attempts and returns the number of
+// correct answers / total answers for the specified question.  The routine
+// inspects the Answers JSON inside TakeExercise rows and treats any
+// exp_gained>0 as a correct response (this mirrors grading logic used above).
+func (e *exerciseRepository) computeQuestionStats(qID uint) (correct, total int, err error) {
+	var takes []model.TakeExercise
+	if err = e.db.Find(&takes, "answers LIKE ?", fmt.Sprintf("%%\"question_id\":%d%%", qID)).Error; err != nil {
+		return
+	}
+	for _, t := range takes {
+		var ansMap map[string]interface{}
+		if err2 := json.Unmarshal(t.Answers, &ansMap); err2 != nil {
+			continue
+		}
+		for _, v := range ansMap {
+			if detail, ok := v.(map[string]interface{}); ok {
+				if idF, ok := detail["question_id"].(float64); ok && uint(idF) == qID {
+					total++
+					if expF, ok := detail["exp_gained"].(float64); ok && expF > 0 {
+						correct++
+					}
+				}
+			}
+		}
+	}
+	return
+}
+
+// userCorrectQuestions returns a set of question IDs that the specified user
+// has already answered correctly for the given exercise.  This is used to avoid
+// presenting the same item again during adaptive selection.
+func (e *exerciseRepository) userCorrectQuestions(userID, exerciseID uint) (map[int]struct{}, error) {
+	res := make(map[int]struct{})
+	if userID == 0 {
+		return res, nil
+	}
+
+	var takes []model.TakeExercise
+	if err := e.db.Where("user_id = ? AND exercise_id = ?", userID, exerciseID).Find(&takes).Error; err != nil {
+		return nil, err
+	}
+
+	for _, t := range takes {
+		var ansMap map[string]interface{}
+		if err := json.Unmarshal(t.Answers, &ansMap); err != nil {
+			continue
+		}
+		for _, v := range ansMap {
+			if detail, ok := v.(map[string]interface{}); ok {
+				if idF, ok := detail["question_id"].(float64); ok {
+					if expF, ok := detail["exp_gained"].(float64); ok && expF > 0 {
+						res[int(idF)] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+	return res, nil
+}
+
+// FindById fetches the exercise along with its questions and answers.  When
+// a non‑zero theta is supplied we perform an adaptive selection of up to five
+// items whose beta values are closest to theta using utils.SelectNextItem.  If
+// theta == 0 we fall back to a random subset (previous behaviour).
+func (e *exerciseRepository) FindById(id uint, theta float64, userID uint) (*model.Exercise, error) {
 	var exercise model.Exercise
 	if err := e.db.
-		Preload("Questions", func(db *gorm.DB) *gorm.DB {
-			return db.Order("RAND()").Limit(5)
-		}).
 		Preload("Questions.Answers").
 		First(&exercise, id).Error; err != nil {
 		return nil, err
 	}
+
+	// remove questions the user has already answered correctly
+	if userID != 0 {
+		if answered, err := e.userCorrectQuestions(userID, id); err == nil && len(answered) > 0 {
+			remaining := make([]model.ExQuestion, 0, len(exercise.Questions))
+			for _, q := range exercise.Questions {
+				if _, ok := answered[int(q.ID)]; ok {
+					continue
+				}
+				remaining = append(remaining, q)
+			}
+			exercise.Questions = remaining
+		}
+	}
+
+	// if there are five or fewer items left just return them; otherwise we'll
+	// perform either adaptive or random selection depending on theta.
+	if len(exercise.Questions) <= 5 {
+		return &exercise, nil
+	}
+
+	avail := make(map[int]float64, len(exercise.Questions))
+	for _, q := range exercise.Questions {
+		avail[int(q.ID)] = q.Beta
+	}
+
+	var chosenIDs []uint
+	if theta != 0 {
+		for len(chosenIDs) < 5 {
+			next := utils.SelectNextItem(theta, avail)
+			if next == -1 {
+				break
+			}
+			chosenIDs = append(chosenIDs, uint(next))
+			delete(avail, next)
+		}
+	} else {
+		keys := make([]int, 0, len(avail))
+		for k := range avail {
+			keys = append(keys, k)
+		}
+		rand.Shuffle(len(keys), func(i, j int) { keys[i], keys[j] = keys[j], keys[i] })
+		for i := 0; i < 5 && i < len(keys); i++ {
+			chosenIDs = append(chosenIDs, uint(keys[i]))
+		}
+	}
+
+	var filtered []model.ExQuestion
+	for _, q := range exercise.Questions {
+		for _, id2 := range chosenIDs {
+			if q.ID == id2 {
+				filtered = append(filtered, q)
+				break
+			}
+		}
+	}
+	exercise.Questions = filtered
 	return &exercise, nil
 }
+

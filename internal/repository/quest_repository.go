@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	"strings"
-	"time"
 
 	"boysitorus/Progamify-Restful-API/internal/model"
 	"boysitorus/Progamify-Restful-API/pkg/utils"
@@ -17,7 +15,6 @@ import (
 
 type QuestRepository interface {
 	GetQuestByUserID(userID uint) (*model.Quest, error)
-	GetDifficultyByLevel(levelId uint) string
 	AddTakeQuest(userID uint, request model.SubmitQuestRequest) (*model.TakeQuest, error)
 }
 
@@ -37,50 +34,12 @@ func (qr *questRepository) GetQuestByUserID(userID uint) (*model.Quest, error) {
 		return nil, errors.New("level not found")
 	}
 
-	difficulty := qr.GetDifficultyByLevel(uint(level.Level))
-
 	var quest model.Quest
-	if err := qr.db.Preload("Answers").Where("difficulty = ?", difficulty).Order("RAND()").First(&quest).Error; err != nil {
+	if err := qr.db.Preload("Answers").Order("RAND()").First(&quest).Error; err != nil {
 		return nil, errors.New("no suitable quest found")
 	}
 
 	return &quest, nil
-}
-
-func (qr *questRepository) GetDifficultyByLevel(levelId uint) string {
-	rand.Seed(time.Now().UnixNano())
-	probability := rand.Float64() 
-
-	switch {
-	case levelId <= 10: 
-		return "Easy"
-	case levelId <= 29: 
-		if probability < 0.7 {
-			return "Easy"
-		}
-		return "Medium"
-	case levelId <= 49:
-		if probability < 0.5 {
-			return "Medium"
-		} else if probability < 0.85 {
-			return "Hard"
-		}
-		return "Easy"
-	case levelId <= 79:
-		if probability < 0.4 {
-			return "Medium"
-		} else if probability < 0.75 {
-			return "Hard"
-		}
-		return "Very Hard"
-	default: 
-		if probability < 0.3 {
-			return "Medium"
-		} else if probability < 0.6 {
-			return "Hard"
-		}
-		return "Very Hard"
-	}
 }
 
 func NewQuestRepository(db *gorm.DB, userRepo UserRepository) QuestRepository {

@@ -8,11 +8,16 @@ import (
 	"boysitorus/Progamify-Restful-API/internal/service"
 	"boysitorus/Progamify-Restful-API/pkg/database"
 	"log"
+	"math/rand"
+	"time"
 )
 
 func main() {
 	// Load config
 	cfg := config.LoadConfig()
+
+	// seed RNG for any random selection
+	rand.Seed(time.Now().UnixNano())
 
 	// Initialize DB
 	db := database.InitDB(cfg)
@@ -35,7 +40,7 @@ func main() {
 	userService := service.NewUserService(userRepo)
 	topicService := service.NewTopicService(topicRepo)
 	lessonService := service.NewLessonService(lessonRepo)
-	exerciseService := service.NewExerciseService(exerciseRepo)
+	exerciseService := service.NewExerciseService(exerciseRepo, userRepo)
 	leaderboardService := service.NewLeaderboardService(userRepo)
 	questService := service.NewQuestService(questRepo)
 	discussionService := service.NewDiscussionService(discussionRepo)

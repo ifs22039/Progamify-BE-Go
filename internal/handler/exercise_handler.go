@@ -25,7 +25,12 @@ func (h *ExerciseHandler) GetExercise(c *gin.Context) {
 		return
 	}
 
-	exercise, err := h.exerciseService.GetExerciseById(uint(id))
+// attempt to obtain the current user's ID from context (may be absent)
+		var uid uint
+		if v, ok := c.Get("userId"); ok {
+			uid = v.(uint)
+		}
+		exercise, err := h.exerciseService.GetExerciseById(uint(id), uid)
 
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Exercise not found"})
