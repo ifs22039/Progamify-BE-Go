@@ -503,6 +503,11 @@ case "essay":
 		log.Printf("Unsupported question type '%s' for question %d", question.Type, question.ID)
 	}
 
+		if m, ok := takeExerciseAnswer[key].(map[string]interface{}); ok {
+			m["question"] = question
+			takeExerciseAnswer[key] = m
+		}
+
 		// === IRT per-soal (theta diperbarui berdasarkan hitungan jawaban) ===
 		// maintain running totals so that theta is recalculated after every item
 		// (makes the adaptation visible within a single exercise session).

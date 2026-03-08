@@ -15,7 +15,7 @@ type questService struct {
 }
 
 func (e *questService) GetQuestById(id uint) (*model.Quest, error) {
-	return e.questRepo.GetQuestByUserID(id)
+	return e.questRepo.GetQuestByID(id)
 }
 
 func (e *questService) AddTakeQuest(userID uint, request model.SubmitQuestRequest) (*model.TakeQuest, error) {
