@@ -95,7 +95,7 @@ func (e *exerciseRepository) AddTakeExercise(
 	correctCountProgress := 0
 	answeredCount := 0
 
-	// Threshold bisa diatur via config nanti (misal di env atau di tabel exercise)
+	// Threshold bisa diatur via config nanti 
 	const essayGradingThreshold = 50.0
 
 	for key, value := range answersJSON {
@@ -308,6 +308,14 @@ case "essay":
 			// manual review).  The mobile client did send text, but we cannot
 			// compare it automatically.
 			log.Printf("⚠️ No correct answer found for essay question %d, skipping auto‑grading", question.ID)
+			takeExerciseAnswer[key] = map[string]interface{}{
+				"question_id":  question.ID,
+				"type":         question.Type,
+				"exp_gained":   0,
+				"point_gained": 0,
+				"user_answer":  userAnswerText,
+				"status":       "no_reference",
+			}
 		} else {
 			// Grade essay using the external service and compare against threshold
 			gradeResult, err := utils.EssayGrading(correctText, userAnswerText)
@@ -319,10 +327,21 @@ case "essay":
 			score := gradeResult.FinalScore * 100 // percentage used for IRT/points
 			isCorrectEssay := score >= essayGradingThreshold
 
-			if isCorrectEssay {
-				exp = question.Exp
-				point = question.Point
-				totalCorrect += 1
+			multiplier := 0.0
+			if score >= 80 {
+				multiplier = 1.0
+			} else if score >= 70 {
+				multiplier = 0.75
+			} else if score >= 60 {
+				multiplier = 0.50
+			} else if score >= 50 {
+				multiplier = 0.25
+			}
+
+			if multiplier > 0 {
+				exp = int(multiplier * float64(question.Exp))
+				point = int(multiplier * float64(question.Point))
+				totalCorrect += multiplier
 			}
 			questionResults[question.ID] = isCorrectEssay
 
@@ -343,16 +362,6 @@ case "essay":
 				"is_correct":       isCorrectEssay,
 				"feedback":         question.Feedback,
 			}
-		}
-
-		// when correctText == "" we still want to record the user's answer
-		takeExerciseAnswer[key] = map[string]interface{}{
-			"question_id":  question.ID,
-			"type":         question.Type,
-			"exp_gained":   0,
-			"point_gained": 0,
-			"user_answer":  userAnswerText,
-			"status":       "no_reference",
 		}
 
 	case "short_answer":
@@ -711,7 +720,11 @@ func (e *exerciseRepository) FindById(id uint, theta float64, userID uint) (*mod
 				}
 				remaining = append(remaining, q)
 			}
-			exercise.Questions = remaining
+			// Fallback: Jika semua soal sudah dijawab dengan benar, tampilkan kembali semua soal
+			// agar mobile client tidak crash akibat mendapatkan list kosong.
+			if len(remaining) > 0 {
+				exercise.Questions = remaining
+			}
 		}
 	}
 

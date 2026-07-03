@@ -186,9 +186,20 @@ func (qr *questRepository) AddTakeQuest(userID uint, request model.SubmitQuestRe
 			similarity = gradeResult.FinalScore * 100
 		}
 
-		if similarity >= 50 {
-			exp = exp + question.Exp
-			point = point + question.Point
+		multiplier := 0.0
+		if similarity >= 80 {
+			multiplier = 1.0
+		} else if similarity >= 70 {
+			multiplier = 0.75
+		} else if similarity >= 60 {
+			multiplier = 0.50
+		} else if similarity >= 50 {
+			multiplier = 0.25
+		}
+
+		if multiplier > 0 {
+			exp = int(multiplier * float64(question.Exp))
+			point = int(multiplier * float64(question.Point))
 
 			rewardExp += exp
 			rewardPoint += point
